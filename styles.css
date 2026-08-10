@@ -1,0 +1,425 @@
+/* Kâr Marjı Hesaplayıcı — stiller
+   Mobil öncelikli, framework'süz, tek dosya. */
+
+:root {
+  --brand: #4338CA;
+  --brand-dark: #372AA8;
+  --brand-light: #EEF2FF;
+  --bg: #F5F5F8;
+  --card-bg: #FFFFFF;
+  --text: #1A1A2E;
+  --text-muted: #6B7280;
+  --border: #E3E3EA;
+  --error: #DC2626;
+  --success: #16A34A;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(20, 20, 40, 0.08), 0 1px 2px rgba(20, 20, 40, 0.06);
+  --shadow-lg: 0 8px 24px rgba(20, 20, 40, 0.10);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p, ul {
+  margin: 0;
+}
+
+button, input, select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--brand);
+}
+
+/* --- Üst bar --- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--brand);
+  color: #fff;
+  padding: env(safe-area-inset-top, 0) var(--space-4) 0 var(--space-4);
+  box-shadow: var(--shadow);
+}
+
+.topbar .brand {
+  display: block;
+  padding: var(--space-4) 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* --- Sayfa iskeleti --- */
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* --- Kartlar --- */
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+}
+
+.form-card h2 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--brand);
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.form-card h2:first-child {
+  margin-top: 0;
+}
+
+/* --- Form alanları --- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field input[type="number"],
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 11px var(--space-3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-size: 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236B7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.field input[type="number"]:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.field input::placeholder {
+  color: #A0A0AE;
+}
+
+.checkbox-field {
+  flex-direction: row;
+}
+
+.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+  flex-shrink: 0;
+}
+
+/* --- Desi / ölçü hesaplayıcı --- */
+
+details.dims {
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+details.dims summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+.dims-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.dims-grid input {
+  width: 100%;
+  padding: 9px var(--space-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+}
+
+.dims-grid .btn-secondary {
+  grid-column: 1 / -1;
+}
+
+.btn-secondary {
+  padding: 10px var(--space-3);
+  border: 1.5px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--brand);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-secondary:hover,
+.btn-secondary:active {
+  background: var(--brand-light);
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: calc(var(--space-2) * -1);
+  margin-bottom: var(--space-4);
+  min-height: 1em;
+}
+
+/* --- Gelişmiş / platforma özel ayarlar --- */
+
+details.advanced {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+details.advanced summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--brand);
+  margin-bottom: var(--space-2);
+}
+
+details.advanced[open] summary {
+  margin-bottom: var(--space-4);
+}
+
+details.advanced .field {
+  padding: var(--space-3);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Özet banner --- */
+
+.summary:empty {
+  display: none;
+}
+
+.summary {
+  background: var(--brand);
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff;
+  border-radius: var(--radius);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-lg);
+}
+
+.summary p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.summary strong {
+  font-weight: 800;
+}
+
+/* --- Sonuç kartları --- */
+
+.results {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 560px) {
+  .results {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.result-card {
+  --accent: var(--brand);
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-4);
+  border-top: 4px solid var(--accent);
+}
+
+.result-card h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: var(--space-2);
+}
+
+.result-card .price {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--space-2);
+}
+
+.result-card .muted {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.result-card .error {
+  font-size: 0.85rem;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.result-card ul.breakdown {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-3);
+  border-top: 1px dashed var(--border);
+  padding-top: var(--space-2);
+}
+
+.result-card ul.breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.result-card ul.breakdown li span:first-child {
+  flex: 1;
+}
+
+.result-card ul.breakdown li span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* --- Kaynaklar & notlar --- */
+
+details.notes {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space-4) var(--space-5);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+details.notes summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+details.notes[open] summary {
+  margin-bottom: var(--space-3);
+}
+
+details.notes ul {
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+details.notes li {
+  line-height: 1.5;
+}
+
+/* --- Erişilebilirlik: klavye odağı --- */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* --- Geniş ekran --- */
+
+@media (min-width: 900px) {
+  .page {
+    max-width: 960px;
+  }
+
+  .results {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

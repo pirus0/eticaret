@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Kâr Marjı Hesaplayıcı</title>
+<meta name="description" content="Amazon, Trendyol, Shopify ve Etsy için komisyon, kargo ve reklam giderini hesaba katarak hedef kâr marjına göre satış fiyatı hesaplar." />
+<meta name="theme-color" content="#4338CA" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Kâr Hesap" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">Kâr Marjı Hesaplayıcı</span>
+</header>
+
+<main class="page">
+
+  <section class="card form-card">
+    <h2>Ürün</h2>
+    <div class="field">
+      <label for="cost">Ürün maliyeti (₺)</label>
+      <input type="number" id="cost" inputmode="decimal" min="0" step="0.01" value="100" />
+    </div>
+    <div class="field">
+      <label for="sector">Sektör</label>
+      <select id="sector"></select>
+    </div>
+
+    <h2>Hedef</h2>
+    <div class="field">
+      <label for="margin">Hedef kâr oranı (satış fiyatının %'si)</label>
+      <input type="number" id="margin" inputmode="decimal" min="0" max="99" step="0.5" value="20" />
+    </div>
+
+    <h2>Kargo</h2>
+    <div class="field">
+      <label for="carrier">Taşıyıcı</label>
+      <select id="carrier">
+        <option value="auto">Otomatik (en ucuzu seç)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="desi">Desi</label>
+      <input type="number" id="desi" inputmode="decimal" min="0" step="0.1" value="3" />
+    </div>
+    <details class="dims">
+      <summary>Ölçülerden hesapla (Desi = En×Boy×Yükseklik / 3000)</summary>
+      <div class="dims-grid">
+        <input type="number" id="dimW" placeholder="En (cm)" min="0" />
+        <input type="number" id="dimD" placeholder="Boy (cm)" min="0" />
+        <input type="number" id="dimH" placeholder="Yükseklik (cm)" min="0" />
+        <button type="button" id="dimApply" class="btn-secondary">Desi'ye uygula</button>
+      </div>
+    </details>
+    <p class="hint" id="carrierNote"></p>
+
+    <h2>Ek Giderler</h2>
+    <div class="field">
+      <label for="ads">Reklam gideri (₺, manuel — sen gireceksin)</label>
+      <input type="number" id="ads" inputmode="decimal" min="0" step="0.01" value="0" />
+    </div>
+
+    <details class="advanced">
+      <summary>Platforma özel ayarlar (isteğe bağlı)</summary>
+
+      <div class="field">
+        <label for="amazonOverride">Amazon komisyonu elle gir (%) — boş bırakılırsa sektör varsayılanı kullanılır</label>
+        <input type="number" id="amazonOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
+      </div>
+
+      <div class="field">
+        <label for="trendyolOverride">Trendyol komisyonu elle gir (%) — tahmini oran yerine kendi panelindeki gerçek oranı gir</label>
+        <input type="number" id="trendyolOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik (yaklaşık)" />
+      </div>
+
+      <div class="field">
+        <label for="shopifyPlan">Shopify planı</label>
+        <select id="shopifyPlan"></select>
+      </div>
+      <div class="field">
+        <label for="shopifyUnits">Shopify aylık tahmini satış adedi (opsiyonel — abonelik ücretini birime böler)</label>
+        <input type="number" id="shopifyUnits" inputmode="numeric" min="0" step="1" placeholder="boş = abonelik hesaba katılmaz" />
+      </div>
+
+      <div class="field">
+        <label for="etsyPayment">Etsy ödeme işleme oranı (%) — Türkiye için doğrulanamadı, tahmini değer</label>
+        <input type="number" id="etsyPayment" inputmode="decimal" min="0" max="20" step="0.1" value="4" />
+      </div>
+      <div class="field checkbox-field">
+        <label><input type="checkbox" id="etsyOffsite" /> Bu satış Etsy Offsite Ads'ten geldi (zorunlu ek ücret)</label>
+      </div>
+      <div class="field checkbox-field" id="etsyThresholdWrap">
+        <label><input type="checkbox" id="etsyOverThreshold" /> Yıllık Etsy satışım $10.000 üzerinde (üzerindeyse %12, altındaysa %15)</label>
+      </div>
+    </details>
+  </section>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="results" id="results"></section>
+
+  <details class="notes">
+    <summary>Kaynaklar &amp; güven notları</summary>
+    <ul id="notesList"></ul>
+  </details>
+
+</main>
+
+<script src="calc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
