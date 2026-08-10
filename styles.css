@@ -313,6 +313,19 @@ body.is-scrolled .topbar .brand {
   color: var(--muted);
 }
 
+/* .field-hint bazen bir input'a değil doğrudan .field-group/.platform-group'a
+   bağlı, tek başına bir kapsam notu olarak kullanılıyor (ör. "bu tutar X
+   senaryosunu varsayar"). O durumda .field'ın flex-gap'inden yararlanamadığı
+   için kendi boşluğunu tanımlar. */
+.field-group > .field-hint,
+.platform-group > .field-hint {
+  margin: 0 0 var(--space-4) 0;
+}
+.field-group > .field-hint:last-child,
+.platform-group > .field-hint:last-child {
+  margin-bottom: 0;
+}
+
 .field input[type="number"],
 .field input[type="text"],
 .field select {

@@ -100,6 +100,41 @@ def main():
         margin_input.type("20")
         page.wait_for_timeout(200)
 
+        # ============== KARGO: PLATFORM BAZLI MODEL (10 Agustos 2026 arastirmasi) ==============
+        # details.advanced yukarida (Etsy offsite testi icin) zaten acildi.
+        trendyol_price_before = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        amazon_price_before = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        page.fill("#trendyolKargoOverride", "500")
+        page.wait_for_timeout(200)
+        trendyol_price_after = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        amazon_price_after = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        check("Trendyol kargo override girilince Trendyol fiyati degisiyor",
+              trendyol_price_before != trendyol_price_after, f"{trendyol_price_before} -> {trendyol_price_after}")
+        check("Trendyol kargo override Amazon fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              amazon_price_before == amazon_price_after, f"{amazon_price_before} -> {amazon_price_after}")
+        page.fill("#trendyolKargoOverride", "")
+        page.wait_for_timeout(200)
+
+        # Etsy kendi kargo alanini kullanmali; paylasilan desi/tasiyici degisince fiyati ETKILENMEMELI.
+        etsy_price_before_shared = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
+        desi_input = page.query_selector("#desi")
+        desi_input.click(click_count=3)
+        desi_input.type("25")
+        page.wait_for_timeout(200)
+        etsy_price_after_shared = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
+        check("Etsy fiyati paylasilan kargo/desi degisince ETKILENMIYOR (ayri alan kullanir)",
+              etsy_price_before_shared == etsy_price_after_shared, f"{etsy_price_before_shared} -> {etsy_price_after_shared}")
+
+        page.fill("#etsyKargo", "300")
+        page.wait_for_timeout(200)
+        etsy_price_after_own = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
+        check("Etsy kendi kargo alani doldurulunca Etsy fiyati degisiyor",
+              etsy_price_after_shared != etsy_price_after_own, f"{etsy_price_after_shared} -> {etsy_price_after_own}")
+        page.fill("#etsyKargo", "0")
+        desi_input.click(click_count=3)
+        desi_input.type("3")
+        page.wait_for_timeout(200)
+
         # ============== YENI TASARIM ==============
         summary_bg_image = page.eval_on_selector("#summary", "el => getComputedStyle(el).backgroundImage")
         check("Ozet blogunda gradyan YOK", summary_bg_image == "none", summary_bg_image)

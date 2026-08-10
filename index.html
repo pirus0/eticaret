@@ -53,6 +53,7 @@
 
     <div class="field-group" data-reveal>
       <h2>Kargo</h2>
+      <p class="field-hint">Amazon, Shopify ve Trendyol'un (varsayılan) ortak yurt içi tutarı. Etsy genelde yurt dışına gönderim yaptığı için ayrı bir alanı var (aşağıda, "Platforma özel ayarlar → Etsy" içinde).</p>
       <div class="field">
         <label for="carrier">Taşıyıcı</label>
         <select id="carrier">
@@ -94,6 +95,7 @@
             <input type="number" id="amazonOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
             <p class="field-hint">Boş bırakılırsa sektör varsayılanı kullanılır.</p>
           </div>
+          <p class="field-hint">Soldaki kargo tutarı satıcı-gönderimli (kendi kargo firmanız) senaryoyu varsayar — Amazon bunu serbest bırakıyor. Amazon Lojistik (FBA) veya Amazon Kolay Gönderi kullanıyorsanız ücretler farklı bir tarifeye tabidir ve bu hesaplayıcının kapsamında değildir.</p>
         </div>
 
         <div class="platform-group trendyol">
@@ -102,6 +104,11 @@
             <label for="trendyolOverride">Komisyon (%)<span class="field-tag">Opsiyonel</span></label>
             <input type="number" id="trendyolOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
             <p class="field-hint">Varsayılan, dört kaynaktan derlenen yaklaşık bir değer. Panelindeki gerçek oranla değiştirilebilir.</p>
+          </div>
+          <div class="field">
+            <label for="trendyolKargoOverride">Kargo (₺)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="trendyolKargoOverride" inputmode="decimal" min="0" step="0.01" placeholder="otomatik (soldaki kargo tutarı)" />
+            <p class="field-hint">Trendyol, satıcı sözleşmesindeki kapalı bir anlaşmalı kargo listesiyle sınırlıdır (serbest taşıyıcı seçimi yok). Soldaki genel tutar farklı bir kaynaktan geldiği için panelinizin kestiği gerçek tutarla birebir örtüşmeyebilir — üç bağımsız kaynak aynı taşıyıcı/desi için birbirinden %35'e varan rakamlar veriyor. Panelinizdeki gerçek tutarı biliyorsanız buraya yazın.</p>
           </div>
         </div>
 
@@ -120,6 +127,11 @@
 
         <div class="platform-group etsy">
           <h4>Etsy</h4>
+          <div class="field">
+            <label for="etsyKargo">Kargo — yurt dışı gönderim (₺)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="etsyKargo" inputmode="decimal" min="0" step="0.01" value="0" />
+            <p class="field-hint">Etsy satışları genelde yurt dışına gider; soldaki "Kargo" bölümündeki yurt içi tutar Etsy'de KULLANILMAZ. Kendi taşıyıcınızdan (DHL/UPS/FedEx/PTT Yurtdışı/Navlungo vb.) aldığınız gerçek teklifi girin — boş/0 bırakılırsa fiyat olduğundan düşük çıkar. Alıcıdan ayrıca kargo ücreti tahsil ediyorsanız net maliyeti (ödediğiniz − tahsil ettiğiniz) yazabilirsiniz.</p>
+          </div>
           <div class="field">
             <label for="etsyPayment">Ödeme işleme oranı (%)<span class="field-tag">Tahmini</span></label>
             <input type="number" id="etsyPayment" inputmode="decimal" min="0" max="20" step="0.1" value="4" />

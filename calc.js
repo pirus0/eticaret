@@ -14,6 +14,23 @@
  *     P = (maliyet + kargo + reklam + sabit_ücretler) / (1 - hedef_kâr% - Σ yüzdesel_ücretler%)
  *   "Kâr marjı", satış fiyatının (maliyet değil!) yüzdesi olarak tanımlanıyor —
  *   Türkiye'de "kâr marjı" genelde bu şekilde konuşulur (net kâr / satış fiyatı).
+ *
+ * KARGO MODELİ (platform bazlı — 10 Ağustos 2026'da araştırıldı, bkz.
+ * research/platform-kargo-kisitlari.md):
+ *   - Amazon ve Shopify'da satıcı kargo firmasını serbestçe seçebiliyor
+ *     (Amazon için bu "satıcı-gönderimli/kendi kargonuz" senaryosu; FBA ve
+ *     Amazon Kolay Gönderi farklı ücretlendirir, kapsam dışı) — bu yüzden
+ *     paylaşılan `kargoTRY` (genel piyasa tablosu) doğrudan kullanılıyor.
+ *   - Trendyol'da satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo
+ *     listesiyle sınırlı (developers.trendyol.com'a göre 10 sabit firma).
+ *     Paylaşılan `kargoTRY` varsayılan olarak kullanılıyor (yön gösterici)
+ *     ama `trendyolKargoOverrideTRY` girilirse ona öncelik veriliyor —
+ *     üç bağımsız kaynağın Trendyol tarifeleri arasında aynı taşıyıcı/desi
+ *     için %35'e varan fark bulunduğundan tek bir sayı güvenilir değil.
+ *   - Etsy satışları genelde YURT DIŞINA gider; yurt içi desi tablosu farklı
+ *     bir maliyet sınıfı olduğu için hiç uygulanmıyor. Etsy kendi
+ *     `etsyKargoTRY` alanını kullanıyor (girilmezse 0 — reklam gideri
+ *     alanıyla aynı "kullanıcı doldurur" mantığı).
  */
 
 (function (root) {
@@ -212,7 +229,12 @@
   function round2(n) { return Math.round(n * 100) / 100; }
 
   function computeAll(input) {
-    // input: { costTRY, sectorId, marginPct, kargoTRY, reklamTRY, shopifyPlanId, etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct, amazonOverridePct }
+    // input: { costTRY, sectorId, marginPct, kargoTRY, reklamTRY, shopifyPlanId,
+    //   etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct,
+    //   amazonOverridePct, trendyolKargoOverrideTRY, etsyKargoTRY }
+    // kargoTRY: Amazon (satıcı-gönderimli) + Shopify + Trendyol'un varsayılanı.
+    // trendyolKargoOverrideTRY: verilirse Trendyol için kargoTRY yerine kullanılır.
+    // etsyKargoTRY: Etsy'ye özel, kargoTRY'den bağımsız (bkz. dosya başındaki not).
     var sector = SECTORS.filter(function (s) { return s.id === input.sectorId; })[0];
     var results = {};
 
@@ -228,6 +250,8 @@
       }
       var pct = input.amazonOverridePct != null ? input.amazonOverridePct : resolveTieredWithFeedback(sector.amazon);
       var effectivePct = pct * 1.20; // Amazon komisyonu üzerine ayrıca %20 KDV ekleniyor
+      // kargoTRY burada satıcı-gönderimli (kendi kargo firmanız) senaryoyu
+      // varsayıyor — Amazon bunu serbest bırakıyor. FBA/Kolay Gönderi kapsam dışı.
       var fixed = input.costTRY + input.kargoTRY + input.reklamTRY;
       var r = solvePrice(fixed, [
         { label: 'Komisyon (+KDV)', pct: effectivePct },
@@ -262,7 +286,11 @@
         results.trendyol = { unavailable: true, reason: 'Bu sektör için Trendyol oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
         return;
       }
-      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY;
+      // Trendyol kapalı bir anlaşmalı kargo listesi kullanır; satıcı panelindeki
+      // gerçek tutar biliniyorsa trendyolKargoOverrideTRY ona öncelik verir,
+      // yoksa paylaşılan (genel piyasa) kargoTRY yön gösterici olarak kullanılır.
+      var trendyolKargo = input.trendyolKargoOverrideTRY != null ? input.trendyolKargoOverrideTRY : input.kargoTRY;
+      var fixed = input.costTRY + trendyolKargo + input.reklamTRY;
       var r = solvePrice(fixed, [
         { label: 'Komisyon (yaklaşık)', pct: pct },
         { label: 'Hedef kâr', pct: input.marginPct }
@@ -304,7 +332,10 @@
         var adsPct = input.etsyOverThreshold ? ETSY.offsiteAds.overThresholdPct : ETSY.offsiteAds.underThresholdPct;
         pcts.splice(3, 0, { label: 'Offsite Ads (zorunlu)', pct: adsPct });
       }
-      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + listingFeeTRY;
+      // Etsy, paylaşılan yurt içi kargo tablosunu KULLANMAZ (satışlar genelde
+      // yurt dışına gider — farklı bir maliyet sınıfı). Kendi alanı girilmezse 0.
+      var etsyKargo = input.etsyKargoTRY != null ? input.etsyKargoTRY : 0;
+      var fixed = input.costTRY + etsyKargo + input.reklamTRY + listingFeeTRY;
       var r = solvePrice(fixed, pcts);
       results.etsy = r;
     })();

@@ -17,7 +17,8 @@
 
   var el = {};
   ['cost', 'sector', 'margin', 'carrier', 'desi', 'dimW', 'dimD', 'dimH', 'dimApply',
-    'carrierNote', 'ads', 'amazonOverride', 'trendyolOverride', 'shopifyPlan', 'shopifyUnits',
+    'carrierNote', 'ads', 'amazonOverride', 'trendyolOverride', 'trendyolKargoOverride',
+    'shopifyPlan', 'shopifyUnits', 'etsyKargo',
     'etsyPayment', 'etsyOffsite', 'etsyOverThreshold', 'etsyThresholdWrap',
     'summary', 'summaryText', 'results', 'notesList', 'liveBar',
     'savedListBtn', 'savedCount', 'saveTrigger',
@@ -104,8 +105,10 @@
       reklamTRY: parseFloat(el.ads.value) || 0,
       amazonOverridePct: el.amazonOverride.value === '' ? null : parseFloat(el.amazonOverride.value),
       trendyolOverridePct: el.trendyolOverride.value === '' ? null : parseFloat(el.trendyolOverride.value),
+      trendyolKargoOverrideTRY: el.trendyolKargoOverride.value === '' ? null : parseFloat(el.trendyolKargoOverride.value),
       shopifyPlanId: el.shopifyPlan.value,
       shopifyMonthlyUnits: parseFloat(el.shopifyUnits.value) || 0,
+      etsyKargoTRY: parseFloat(el.etsyKargo.value) || 0,
       etsyPaymentPct: el.etsyPayment.value === '' ? null : parseFloat(el.etsyPayment.value),
       etsyOffsiteAds: el.etsyOffsite.checked,
       etsyOverThreshold: el.etsyOverThreshold.checked
@@ -234,11 +237,13 @@
 
   function renderNotes() {
     var notes = [
-      'Kargo verisi Navlungo Domestic 2026 teklifinden — Aras Kargo kullanıcı isteğiyle listeden çıkarıldı. Tüm kargo fiyatlarına KDV+EPH dahildir.',
-      'Amazon.com.tr oranları resmi kaynaktan (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026 tarifesi. Komisyon üzerine ayrıca %20 KDV eklenir (hesaba dahil edildi).',
-      'Trendyol oranları RESMİ DEĞİL — 4 bağımsız kaynaktan (en güncel Temmuz 2026) derlenen yaklaşık değerler. Komisyonun KDV dahil mi hariç mi fiyat üzerinden hesaplandığı kaynaklar arasında çelişkili; kesin oranı satıcı panelinizden teyit edip ilgili alana yazabilirsiniz.',
-      'Shopify oranları resmi (shopify.com/pricing), USD cinsinden, ' + KH.FX.date + ' kuruyla (1 USD ≈ ' + KH.FX.USD_TRY + ' TL) TL\'ye çevrildi.',
+      'Kargo verisi Navlungo Domestic 2026 teklifinden — Aras Kargo kullanıcı isteğiyle listeden çıkarıldı. Tüm kargo fiyatlarına KDV+EPH dahildir. Bu tablo Amazon (satıcı-gönderimli), Shopify ve Trendyol\'un varsayılanı için kullanılır — Etsy\'de kullanılmaz (aşağıya bakın).',
+      'Amazon.com.tr oranları resmi kaynaktan (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026 tarifesi. Komisyon üzerine ayrıca %20 KDV eklenir (hesaba dahil edildi). Kargo tutarı satıcı-gönderimli (kendi kargo firmanız) senaryoyu varsayar — resmi kaynağa göre bu serbest bir seçim; Amazon Lojistik (FBA) ve Amazon Kolay Gönderi\'nin farklı ücretlendirmesi kapsam dışıdır.',
+      'Trendyol komisyon oranları RESMİ DEĞİL — 4 bağımsız kaynaktan (en güncel Temmuz 2026) derlenen yaklaşık değerler. Komisyonun KDV dahil mi hariç mi fiyat üzerinden hesaplandığı kaynaklar arasında çelişkili; kesin oranı satıcı panelinizden teyit edip ilgili alana yazabilirsiniz.',
+      'Trendyol kargo: satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo listesiyle sınırlı (developers.trendyol.com\'a göre 10 sabit firma; serbest taşıyıcı seçimi yok). Soldaki genel kargo tutarı burada varsayılan olarak kullanılıyor ama üç bağımsız kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için birbirinden %35\'e varan farkla ayrıştığı için kesin değil — panelinizdeki gerçek tutarı "Trendyol → Kargo" alanına girebilirsiniz.',
+      'Shopify oranları resmi (shopify.com/pricing), USD cinsinden, ' + KH.FX.date + ' kuruyla (1 USD ≈ ' + KH.FX.USD_TRY + ' TL) TL\'ye çevrildi. Kargo firması seçimi tamamen serbest (platform kısıtlaması yok), bu yüzden soldaki genel tablo doğrudan geçerli.',
       'Etsy: işlem komisyonu (%6,5) ve Türkiye düzenleyici işletim ücreti (%2,27) çoklu kaynaktan teyitli. Ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi — %4 varsayımı tahminidir, değiştirilebilir. Offsite Ads ücreti sadece o satış Etsy\'nin site dışı reklamından geldiyse uygulanır (zorunlu, opt-out yok).',
+      'Etsy kargo: satışlar genelde yurt dışına gittiği için soldaki yurt içi kargo tablosu Etsy\'ye HİÇ uygulanmıyor — Etsy kendi ayrı kargo alanını kullanır, boş/0 bırakılırsa fiyat olduğundan düşük çıkar. Taşıyıcı seçimi serbest (DHL/UPS/FedEx/PTT Yurtdışı/Navlungo vb.); tek bir güvenilir ortalama uluslararası tarife bulunamadığı için (hedef ülkeye, ağırlığa ve taşıyıcıya göre çok değişken) gerçek teklifinizi girmeniz gerekir.',
       'Kur anlık görüntüsü ' + KH.FX.date + ' tarihli (doviz.com + xe.com çapraz kontrollü). Uzun vadede canlı bir kur API\'sine bağlanmalı.',
       'Reklam gideri kalemi araştırılmadı — kullanıcı tarafından girilir.',
       'Kayıtlı ürünler bu tarayıcının kendi cihaz-içi veritabanında (IndexedDB) tutulur — sunucuya gönderilmez, başka bir cihazdan/tarayıcıdan görünmez, tarayıcı verisi temizlenirse silinir.'

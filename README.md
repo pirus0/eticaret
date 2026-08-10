@@ -61,6 +61,26 @@ Görseller IndexedDB'ye yazılmadan önce tarayıcıda (canvas ile) en fazla 640
 uzunluğuna küçültülüp JPEG'e çevriliyor — telefon kamerasından gelen 5-10MB'lık bir
 fotoğraf veritabanını şişirmesin diye.
 
+## Kargo modeli (platform bazlı)
+
+Kargo tutarı artık tek bir paylaşılan alan değil — 10 Ağustos 2026'da yapılan
+araştırma (bkz. `research/platform-kargo-kisitlari.md`), platformların kargo
+firması seçiminde birbirinden çok farklı kısıtlara sahip olduğunu ortaya çıkardı:
+
+- **Amazon (satıcı-gönderimli) ve Shopify:** Kargo firması seçimi serbest —
+  soldaki "Kargo" bölümündeki genel piyasa tutarı doğrudan geçerli. (Amazon
+  Lojistik/FBA ve Amazon Kolay Gönderi farklı ücretlendirir, kapsam dışı.)
+- **Trendyol:** Satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo listesiyle
+  sınırlı (serbest taşıyıcı seçimi yok — bkz. aşağıdaki kaynak güvenilirliği
+  bölümü). Soldaki genel tutar varsayılan/yön gösterici olarak kullanılıyor;
+  "Platforma özel ayarlar → Trendyol" içinde gerçek tutarınızı girebileceğiniz
+  opsiyonel bir "Kargo (₺)" alanı var.
+- **Etsy:** Satışlar genelde yurt dışına gittiği için soldaki yurt içi tablo
+  HİÇ uygulanmıyor — kavramsal olarak farklı bir maliyet sınıfı. Etsy'nin
+  kendi "Kargo — yurt dışı gönderim (₺)" alanı var ("Platforma özel ayarlar →
+  Etsy" içinde), varsayılan 0 — Reklam Gideri alanıyla aynı mantıkla, siz
+  doldurursunuz.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -91,6 +111,9 @@ değiştirip kaydetmeniz yeterli:
 
 - `KH.FX` — USD/TRY, EUR/TRY anlık kur değeri ve tarihi (Shopify/Etsy TL çevirisinde kullanılıyor).
 - `KH.CARGO` — Her taşıyıcı için desi bazlı fiyat aralıkları (Aras Kargo kasıtlı olarak yok).
+  Bu tablo Amazon/Shopify/Trendyol-varsayılanı için ortak; Trendyol'un kendi override'ı ve
+  Etsy'nin tamamen ayrı kargo alanı `computeAll()`'a doğrudan input olarak geçiliyor
+  (bkz. "Kargo modeli" bölümü yukarıda).
 - `KH.SECTORS` — Sektör başına Amazon/Trendyol komisyon oranları (Amazon'da bazı
   sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda).
 - `KH.SHOPIFY_PLANS` — Plan başına aylık ücret + kart işlem oranı.
@@ -106,21 +129,30 @@ değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
 
 ## Kaynak güvenilirliği — önemli
 
-`research/` klasöründeki iki dosya, uygulamaya gömülü her oranın nereden geldiğini,
+`research/` klasöründeki üç dosya, uygulamaya gömülü her oranın nereden geldiğini,
 hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. Özetle:
 
 - **Amazon.com.tr:** Resmi kaynak (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026
   tarifesi — yüksek güven.
-- **Trendyol:** Amazon gibi tek/resmi bir oran sayfası yok. 4 bağımsız kaynaktan
-  derlenen YAKLAŞIK değerler kullanılıyor — arayüzde bunun yerine kendi satıcı
-  panelinizdeki gerçek oranı yazabileceğiniz opsiyonel bir alan var.
+- **Trendyol (komisyon):** Amazon gibi tek/resmi bir oran sayfası yok. 4 bağımsız
+  kaynaktan derlenen YAKLAŞIK değerler kullanılıyor — arayüzde bunun yerine kendi
+  satıcı panelinizdeki gerçek oranı yazabileceğiniz opsiyonel bir alan var.
 - **Shopify:** Resmi kaynak (shopify.com/pricing) — yüksek güven, USD'den güncel
   kur anlık görüntüsüyle TL'ye çevrildi.
-- **Etsy:** İşlem komisyonu ve TR düzenleyici ücreti çok kaynaklı teyitli; ödeme
-  işleme oranı Türkiye için hiçbir kaynakta netleşmedi (tahmini %4, elle
+- **Etsy (komisyon):** İşlem komisyonu ve TR düzenleyici ücreti çok kaynaklı teyitli;
+  ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi (tahmini %4, elle
   düzeltilebilir alan var).
-- **Kargo:** Navlungo Domestic 2026 teklif PDF'inden — Aras Kargo, isteğiniz üzerine
-  listeden çıkarıldı.
+- **Kargo (yurt içi tablo):** Navlungo Domestic 2026 teklif PDF'inden — Aras Kargo,
+  isteğiniz üzerine listeden çıkarıldı.
+- **Kargo — platform kısıtları (YENİ, 10 Ağustos 2026):** `research/platform-kargo-kisitlari.md`.
+  Trendyol resmi olarak KAPALI bir anlaşmalı kargo listesi kullanıyor (developers.trendyol.com);
+  üç ikincil kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için %35'e varan farkla
+  ayrışıyor — DÜŞÜK güven, override alanı önerilir. Amazon'un satıcı-gönderimli
+  seçeneği serbest (YÜKSEK güven, resmi kaynak). Shopify tamamen serbest. Etsy
+  satışları yurt dışına gittiği için yurt içi tablo hiç geçerli değil — güvenilir
+  tek bir "ortalama uluslararası kargo" rakamı hiçbir kaynakta bulunamadı (rakip bir
+  Etsy kâr hesaplama aracı bile bu yüzden sabit bir tahmin kullanmıyor); bu alan
+  kasıtlı olarak kullanıcı girişine bırakıldı.
 
 Uygulamanın kendisinde de "Kaynaklar & güven notları" bölümü (sayfanın altında,
 açılır panel) aynı uyarıları gösteriyor.
