@@ -82,6 +82,15 @@
         <label for="ads">Reklam gideri (₺)<span class="field-tag">Opsiyonel</span></label>
         <input type="number" id="ads" inputmode="decimal" min="0" step="0.01" value="0" />
       </div>
+      <div class="field">
+        <label for="iadeOrani">İade oranı (%)<span class="field-tag">Opsiyonel</span></label>
+        <input type="number" id="iadeOrani" inputmode="decimal" min="0" max="100" step="0.5" value="0" />
+      </div>
+      <div class="field">
+        <label for="iadeMaliyet">İade başına ek maliyet (₺)<span class="field-tag">Opsiyonel</span></label>
+        <input type="number" id="iadeMaliyet" inputmode="decimal" min="0" step="0.01" value="0" />
+        <p class="field-hint">1 Ocak 2026'dan itibaren mesafeli satışlarda iade kargosu satıcıya ait — Amazon/Trendyol/Shopify'ın fiyatına "iade oranı × bu maliyet" olarak eklenir (Etsy hariç, satışları ağırlıkla yurt dışına gittiği için). Kategoriye göre çok değişken olduğundan (giyim/ayakkabıda araştırmalarda %18-%70 arası rakamlar görüldü) güvenilir tek bir varsayılan yok — ikisi de boş/0 kalırsa hesaba hiç girmez, kendi tahmininizi girin.</p>
+      </div>
     </div>
 
     <div data-reveal>
@@ -110,13 +119,29 @@
             <input type="number" id="trendyolKargoOverride" inputmode="decimal" min="0" step="0.01" placeholder="otomatik (soldaki kargo tutarı)" />
             <p class="field-hint">Trendyol, satıcı sözleşmesindeki kapalı bir anlaşmalı kargo listesiyle sınırlıdır (serbest taşıyıcı seçimi yok). Soldaki genel tutar farklı bir kaynaktan geldiği için panelinizin kestiği gerçek tutarla birebir örtüşmeyebilir — üç bağımsız kaynak aynı taşıyıcı/desi için birbirinden %35'e varan rakamlar veriyor. Panelinizdeki gerçek tutarı biliyorsanız buraya yazın.</p>
           </div>
+          <div class="field">
+            <label for="trendyolHizmetBedeli">Hizmet bedeli (₺)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="trendyolHizmetBedeli" inputmode="decimal" min="0" step="0.01" placeholder="otomatik" />
+            <p class="field-hint">Komisyondan AYRI, sipariş başına sabit bir ücret — 30 Ocak 2026 itibarıyla "Bugün Kargoda" statüsündeki satıcılarda 6,99₺+KDV, diğerlerinde 10,99₺+KDV. Varsayılan, daha yüksek/muhafazakâr kademe (₺13,19). Aynı gün kargo veriyorsanız veya panelinizde farklı bir tutar görüyorsanız buraya yazın.</p>
+          </div>
         </div>
 
         <div class="platform-group shopify">
           <h4>Shopify</h4>
+          <p class="field-hint">Shopify Payments Türkiye'de kullanılamıyor — bu yüzden mağazanız yerel bir sağlayıcı (iyzico/PayTR/banka sanal POS vb.) kullanmak zorunda. Aşağıdaki oran, ödeme sağlayıcınızın kestiği komisyon + Shopify'ın plana göre eklediği "dış sağlayıcı" ek ücretinin TOPLAMI.</p>
           <div class="field">
             <label for="shopifyPlan">Plan</label>
             <select id="shopifyPlan"></select>
+          </div>
+          <div class="field">
+            <label for="shopifyGatewayPct">Ödeme sağlayıcı komisyonu (%)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="shopifyGatewayPct" inputmode="decimal" min="0" max="20" step="0.01" value="2.65" />
+            <p class="field-hint">Varsayılan (%2,65), bu aracın kullanıcısının kendi dış ödeme sisteminden ekran görüntüsüyle bildirdiği gerçek oran (15 gün valörlü). Kendi sağlayıcınızın oranı farklıysa değiştirin — Shopify'ın plana göre ayrıca eklediği ek ücret (%2 / %1 / %0,6) aşağıda "Kullanılan oran"a otomatik dahil edilir.</p>
+          </div>
+          <div class="field">
+            <label for="shopifyGatewayFixedTRY">Ödeme sağlayıcı sabit ücreti (₺)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="shopifyGatewayFixedTRY" inputmode="decimal" min="0" step="0.01" value="0" />
+            <p class="field-hint">Bazı yerel sağlayıcılar yüzdeye ek olarak işlem başına sabit bir ücret de keser. Sağlayıcınızda yoksa 0 bırakın.</p>
           </div>
           <div class="field">
             <label for="shopifyUnits">Aylık tahmini satış adedi<span class="field-tag">Opsiyonel</span></label>

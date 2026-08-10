@@ -135,6 +135,64 @@ def main():
         desi_input.type("3")
         page.wait_for_timeout(200)
 
+        # ============== GIDER KALEMLERI: 2. TUR (10 Agustos 2026 audit) ==============
+        # Trendyol hizmet bedeli alani sadece Trendyol fiyatini etkilemeli.
+        hizmet_trendyol_before = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        hizmet_amazon_before = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        page.fill("#trendyolHizmetBedeli", "50")
+        page.wait_for_timeout(200)
+        hizmet_trendyol_after = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        hizmet_amazon_after = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        check("Trendyol hizmet bedeli girilince Trendyol fiyati degisiyor",
+              hizmet_trendyol_before != hizmet_trendyol_after, f"{hizmet_trendyol_before} -> {hizmet_trendyol_after}")
+        check("Trendyol hizmet bedeli Amazon fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              hizmet_amazon_before == hizmet_amazon_after, f"{hizmet_amazon_before} -> {hizmet_amazon_after}")
+        page.fill("#trendyolHizmetBedeli", "")
+        page.wait_for_timeout(200)
+
+        # Shopify odeme saglayici alanlari (gateway % + sabit ucret) sadece Shopify fiyatini etkilemeli.
+        shopify_before = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        trendyol_before_sf = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        gateway_pct_input = page.query_selector("#shopifyGatewayPct")
+        gateway_pct_input.click(click_count=3)
+        gateway_pct_input.type("6")
+        page.fill("#shopifyGatewayFixedTRY", "20")
+        page.wait_for_timeout(200)
+        shopify_after = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        trendyol_after_sf = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        check("Shopify odeme saglayici alanlari girilince Shopify fiyati degisiyor",
+              shopify_before != shopify_after, f"{shopify_before} -> {shopify_after}")
+        check("Shopify odeme saglayici alanlari Trendyol fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              trendyol_before_sf == trendyol_after_sf, f"{trendyol_before_sf} -> {trendyol_after_sf}")
+        gateway_pct_input.click(click_count=3)
+        gateway_pct_input.type("2.65")
+        page.fill("#shopifyGatewayFixedTRY", "0")
+        page.wait_for_timeout(200)
+
+        # Iade (return) alanlari: Amazon/Trendyol/Shopify fiyatini ARTIRMALI, Etsy'yi ETKILEMEMELI (kapsam disi).
+        amazon_before_iade = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        trendyol_before_iade = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        shopify_before_iade = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        etsy_before_iade = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
+        page.fill("#iadeOrani", "30")
+        page.fill("#iadeMaliyet", "80")
+        page.wait_for_timeout(200)
+        amazon_after_iade = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        trendyol_after_iade = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        shopify_after_iade = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        etsy_after_iade = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
+        check("Iade orani/maliyeti girilince Amazon fiyati ARTIYOR",
+              amazon_before_iade != amazon_after_iade, f"{amazon_before_iade} -> {amazon_after_iade}")
+        check("Iade orani/maliyeti girilince Trendyol fiyati ARTIYOR",
+              trendyol_before_iade != trendyol_after_iade, f"{trendyol_before_iade} -> {trendyol_after_iade}")
+        check("Iade orani/maliyeti girilince Shopify fiyati ARTIYOR",
+              shopify_before_iade != shopify_after_iade, f"{shopify_before_iade} -> {shopify_after_iade}")
+        check("Iade orani/maliyeti Etsy fiyatini ETKILEMIYOR (kapsam disi — yurt disi satis)",
+              etsy_before_iade == etsy_after_iade, f"{etsy_before_iade} -> {etsy_after_iade}")
+        page.fill("#iadeOrani", "0")
+        page.fill("#iadeMaliyet", "0")
+        page.wait_for_timeout(200)
+
         # ============== YENI TASARIM ==============
         summary_bg_image = page.eval_on_selector("#summary", "el => getComputedStyle(el).backgroundImage")
         check("Ozet blogunda gradyan YOK", summary_bg_image == "none", summary_bg_image)

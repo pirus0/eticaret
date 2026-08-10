@@ -38,13 +38,24 @@ console.log('Shopify:', res.shopify.price);
 console.log('Etsy:', res.etsy.price);
 
 check('Amazon fiyat (elle: 150/0.614)', res.amazon.price, 150 / 0.614, 0.5);
-check('Trendyol fiyat (elle: 150/0.586, override yoksa paylaşılan kargoyu kullanır)', res.trendyol.price, 150 / 0.586, 0.5);
 
-var shopifyFixed = 100 + 50 + 0 + 0.30 * KH.FX.USD_TRY;
-check('Shopify fiyat (elle)', res.shopify.price, shopifyFixed / (1 - 0.229), 0.5);
+// Trendyol: fixed'e artık sabit hizmet bedeli de giriyor (bkz. calc.js TRENDYOL_HIZMET_BEDELI_TRY).
+var trendyolFixed = 100 + 50 + 0 + KH.TRENDYOL_HIZMET_BEDELI_TRY;
+check('Trendyol fiyat (elle, hizmet bedeli dahil, override yoksa paylaşılan kargoyu kullanır)',
+      res.trendyol.price, trendyolFixed / 0.586, 0.5);
 
+// Shopify: Shopify Payments TR'de yok — artık gatewayPct (varsayılan SHOPIFY_GATEWAY_DEFAULT_PCT)
+// + plana göre externalSurchargePct (basic=%2) toplanıyor, sabit kart ücreti (cardFixedUSD) yerine
+// kullanıcının kendi ödeme sağlayıcı sabit ücreti (burada girilmedi, 0).
+var shopifyFixed = 100 + 50 + 0;
+var shopifyPct = (KH.SHOPIFY_GATEWAY_DEFAULT_PCT + 2.0 + 20) / 100; // gateway + basic surcharge + hedef kar
+check('Shopify fiyat (elle, dış ödeme sağlayıcı modeliyle)', res.shopify.price, shopifyFixed / (1 - shopifyPct), 0.5);
+
+// Etsy: artık %2,5 para birimi çevrim ücreti de dahil, düzenleyici ücret %1,67'ye
+// düzeltildi (6.5+4+1.67+2.5+20 = %34.67 toplam). Literal değil, KH.ETSY.* referans alınıyor.
 var etsyFixed = 100 + 30 + 0 + 0.20 * KH.FX.USD_TRY;
-check('Etsy fiyat (elle, kendi kargo alanını kullanır — paylaşılan 50 değil 30)', res.etsy.price, etsyFixed / (1 - 0.3277), 0.5);
+var etsyPct = (KH.ETSY.transactionPct + KH.ETSY.defaultPaymentProcessingPct + KH.ETSY.regulatoryOperatingFeePct + KH.ETSY.currencyConversionPct + 20) / 100;
+check('Etsy fiyat (elle, kendi kargo alanını kullanır + para birimi çevrim ücreti dahil)', res.etsy.price, etsyFixed / (1 - etsyPct), 0.5);
 
 // --- YENİ: Trendyol kargo override testi ---
 var trendyolOverrideRes = KH.computeAll({
@@ -53,8 +64,26 @@ var trendyolOverrideRes = KH.computeAll({
 });
 console.log('\n--- Trendyol kargo override=200 (paylaşılan kargoTRY=50 yerine) ---');
 console.log('Trendyol:', trendyolOverrideRes.trendyol.price);
-var trendyolOverrideFixed = 100 + 200 + 0; // override kullanılmalı, 50 değil
+var trendyolOverrideFixed = 100 + 200 + 0 + KH.TRENDYOL_HIZMET_BEDELI_TRY; // override kullanılmalı, 50 değil
 check('Trendyol override kargoyu kullanır (150 değil 300 tabanlı)', trendyolOverrideRes.trendyol.price, trendyolOverrideFixed / 0.586, 0.5);
+
+// --- YENİ: Trendyol hizmet bedeli override testi ---
+var trendyolHizmetRes = KH.computeAll({
+  costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0,
+  shopifyPlanId: 'basic', trendyolHizmetBedeliTRY: 8.39 // aynı gün kargo kademesi (6,99+KDV)
+});
+var trendyolHizmetFixed = 100 + 50 + 0 + 8.39;
+check('Trendyol hizmet bedeli override kullanılıyor', trendyolHizmetRes.trendyol.price, trendyolHizmetFixed / 0.586, 0.5);
+
+// --- YENİ: Shopify ödeme sağlayıcı override testi (kullanıcının kendi oranı, %2,65 değil) ---
+var shopifyGatewayRes = KH.computeAll({
+  costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0,
+  shopifyPlanId: 'basic', shopifyGatewayPct: 5, shopifyGatewayFixedTRY: 10
+});
+var shopifyGatewayFixed = 100 + 50 + 0 + 10;
+var shopifyGatewayPctTotal = (5 + 2.0 + 20) / 100;
+check('Shopify ödeme sağlayıcı override (oran + sabit ücret) kullanılıyor',
+      shopifyGatewayRes.shopify.price, shopifyGatewayFixed / (1 - shopifyGatewayPctTotal), 0.5);
 
 // --- YENİ: Etsy kargo alanı boşsa 0 varsayar (paylaşılan kargoTRY'yi DEVRALMAZ) ---
 var etsyNoKargoRes = KH.computeAll({
@@ -65,7 +94,26 @@ var etsyNoKargoRes = KH.computeAll({
 console.log('\n--- Etsy, etsyKargoTRY verilmedi (paylaşılan kargoTRY=999 devralınmamalı) ---');
 console.log('Etsy:', etsyNoKargoRes.etsy.price);
 var etsyNoKargoFixed = 100 + 0 + 0 + 0.20 * KH.FX.USD_TRY;
-check('Etsy alanı boşken 0 varsayar, 999\'u devralmaz', etsyNoKargoRes.etsy.price, etsyNoKargoFixed / (1 - 0.3277), 0.5);
+check('Etsy alanı boşken 0 varsayar, 999\'u devralmaz', etsyNoKargoRes.etsy.price, etsyNoKargoFixed / (1 - etsyPct), 0.5);
+
+// --- YENİ: İade (return) beklenen maliyeti — Amazon/Trendyol/Shopify'a girmeli, Etsy'ye GİRMEMELİ ---
+var withIade = KH.computeAll({
+  costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0,
+  shopifyPlanId: 'basic', etsyKargoTRY: 30, iadeOraniPct: 20, iadeMaliyetTRY: 100
+});
+var withoutIade = res; // yukarıdaki ana test, iade alanları verilmedi (0 varsayılan)
+var beklenenIadeMaliyet = 0.20 * 100; // %20 * 100₺ = 20₺
+console.log('\n--- İade oranı=%20, iade başı maliyet=100₺ (beklenen ek maliyet: ' + beklenenIadeMaliyet + '₺) ---');
+console.log('Amazon (iadeli):', withIade.amazon.price, 'vs (iadesiz):', withoutIade.amazon.price);
+console.log('Etsy (iadeli):', withIade.etsy.price, 'vs (iadesiz):', withoutIade.etsy.price);
+check('İade maliyeti Amazon fiyatını artırıyor (fark ~ 20₺/(1-0.614))',
+      withIade.amazon.price - withoutIade.amazon.price, beklenenIadeMaliyet / 0.614, 0.5);
+check('İade maliyeti Trendyol fiyatını artırıyor',
+      withIade.trendyol.price - withoutIade.trendyol.price, beklenenIadeMaliyet / 0.586, 0.5);
+check('İade maliyeti Shopify fiyatını artırıyor',
+      withIade.shopify.price - withoutIade.shopify.price, beklenenIadeMaliyet / (1 - shopifyPct), 0.5);
+check('İade maliyeti Etsy\'yi ETKİLEMİYOR (kapsam dışı — yurt dışı satış)',
+      withIade.etsy.price, withoutIade.etsy.price, 0.5);
 
 // Breakdown toplamı fiyata eşit olmalı (kalan kâr + sabitler)
 var amzBreakdownSum = res.amazon.breakdown.reduce(function (s, b) { return s + b.amount; }, 0) + res.amazon.fixedTRY;

@@ -81,6 +81,34 @@ firması seçiminde birbirinden çok farklı kısıtlara sahip olduğunu ortaya 
   Etsy" içinde), varsayılan 0 — Reklam Gideri alanıyla aynı mantıkla, siz
   doldurursunuz.
 
+## Gider kalemleri (2. tur audit, 10 Ağustos 2026)
+
+Kullanıcının "gider kalemlerinin tümü doğru mu sayılmış" sorusu üzerine yapılan
+bağımsız bir audit'in ardından (bkz. `research/ek-gider-kalemleri-2026.md`)
+şu değişiklikler yapıldı:
+
+- **Amazon/Trendyol KDV-komisyon tabanı sorusu ÇÖZÜLDÜ (bug yoktu):** Amazon
+  komisyonu brüt (KDV dahil) fiyata uygulanıp üzerine KDV ekleniyor; Trendyol'da
+  komisyon KDV-hariç tabana uygulanıp komisyon FATURASINA KDV ekleniyor — bu
+  ikinci mekanizma matematiksel olarak brüt fiyatın doğrudan yüzdesine
+  sadeleşiyor. İki platformun kodu da halihazırda doğruydu, sadece farklı
+  mekanizmalar üzerinden.
+- **Trendyol sabit "platform hizmet bedeli" eklendi:** Komisyondan ayrı,
+  sipariş başına sabit bir ücret (varsayılan ₺13,19 — "Platforma özel
+  ayarlar → Trendyol" içinden değiştirilebilir).
+- **Shopify dış ödeme sağlayıcı modeli eklendi:** Shopify Payments Türkiye'de
+  kullanılamadığı için, artık kullanıcının kendi yerel sağlayıcısının oranı +
+  Shopify'ın plana göre eklediği ek ücret ayrı ayrı toplanıyor ("Platforma özel
+  ayarlar → Shopify" içinden değiştirilebilir).
+- **Etsy para birimi çevrim ücreti (%2,5) eklendi:** Resmi kaynaktan, tek/net
+  bir rakam.
+- **Etsy Türkiye düzenleyici işletim ücreti düzeltildi (%2,27 → %1,67):** Resmi
+  kaynağın ülke tablosu doğrudan okundu.
+- **İade (return) beklenen maliyeti eklendi:** 1 Ocak 2026'dan itibaren iade
+  kargosu satıcıya ait (mevzuat değişikliği). "İade oranı% × iade başına
+  maliyet" formülüyle Amazon/Trendyol/Shopify'a ekleniyor (Etsy hariç); ikisi
+  de varsayılan 0, güvenilir bir "tipik" oran bulunamadığı için kullanıcı girer.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -116,8 +144,12 @@ değiştirip kaydetmeniz yeterli:
   (bkz. "Kargo modeli" bölümü yukarıda).
 - `KH.SECTORS` — Sektör başına Amazon/Trendyol komisyon oranları (Amazon'da bazı
   sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda).
-- `KH.SHOPIFY_PLANS` — Plan başına aylık ücret + kart işlem oranı.
-- `KH.ETSY` — İşlem/ilan/düzenleyici/ödeme işleme oranları + Offsite Ads ücreti.
+- `KH.SHOPIFY_PLANS` — Plan başına aylık ücret + Shopify'ın "dış ödeme sağlayıcı"
+  ek ücreti (Shopify Payments Türkiye'de yok, bkz. "Gider kalemleri" bölümü aşağıda).
+- `KH.SHOPIFY_GATEWAY_DEFAULT_PCT` — Kullanıcının kendi yerel ödeme sağlayıcısından
+  (iyzico/PayTR/banka sanal POS vb.) bildirdiği varsayılan komisyon oranı.
+- `KH.TRENDYOL_HIZMET_BEDELI_TRY` — Trendyol'un komisyondan ayrı, sipariş başına sabit ücreti.
+- `KH.ETSY` — İşlem/ilan/düzenleyici/ödeme işleme/para birimi çevrim oranları + Offsite Ads ücreti.
 
 Bir değeri değiştirdikten sonra `node test.js` çalıştırıp hâlâ "TÜM TESTLER GEÇTİ"
 çıktığını görmeniz yeterli (mantık testleri elle hesaplanmış örneklerle karşılaştırıyor,
@@ -129,22 +161,40 @@ değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
 
 ## Kaynak güvenilirliği — önemli
 
-`research/` klasöründeki üç dosya, uygulamaya gömülü her oranın nereden geldiğini,
+`research/` klasöründeki dört dosya, uygulamaya gömülü her oranın nereden geldiğini,
 hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. Özetle:
 
 - **Amazon.com.tr:** Resmi kaynak (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026
-  tarifesi — yüksek güven.
+  tarifesi — yüksek güven. Komisyon KDV dahil (brüt) fiyat üzerinden hesaplanıp
+  üzerine ayrıca KDV ekleniyor.
 - **Trendyol (komisyon):** Amazon gibi tek/resmi bir oran sayfası yok. 4 bağımsız
   kaynaktan derlenen YAKLAŞIK değerler kullanılıyor — arayüzde bunun yerine kendi
-  satıcı panelinizdeki gerçek oranı yazabileceğiniz opsiyonel bir alan var.
-- **Shopify:** Resmi kaynak (shopify.com/pricing) — yüksek güven, USD'den güncel
-  kur anlık görüntüsüyle TL'ye çevrildi.
-- **Etsy (komisyon):** İşlem komisyonu ve TR düzenleyici ücreti çok kaynaklı teyitli;
-  ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi (tahmini %4, elle
+  satıcı panelinizdeki gerçek oranı yazabileceğiniz opsiyonel bir alan var. KDV-hariç
+  tabana uygulanıp komisyon faturasına KDV eklendiği doğrulandı (bkz. "Gider kalemleri"
+  bölümü) — bu, brüt fiyatın doğrudan yüzdesiyle matematiksel olarak eşdeğer çıkıyor.
+- **Trendyol (sabit hizmet bedeli):** pazarfiyat.com kaynaklı, 30 Ocak 2026 tarihli,
+  iki kademeli (6,99₺+KDV / 10,99₺+KDV) — ORTA güven, tek kaynak; panelinizdeki
+  gerçek tutarla değiştirilebilir.
+- **Shopify (abonelik + dış sağlayıcı ek ücreti):** Resmi kaynak (shopify.com/pricing)
+  — yüksek güven, USD'den güncel kur anlık görüntüsüyle TL'ye çevrildi. Shopify
+  Payments'ın Türkiye'de kullanılamadığı ayrıca doğrulandı (workon.com.tr).
+- **Shopify (ödeme sağlayıcı komisyonu):** Varsayılan %2,65, aracın kullanıcısının
+  kendi dış ödeme sisteminden ekran görüntüsüyle bildirdiği GERÇEK rakam — genel bir
+  piyasa tahmini değil, YÜKSEK güven ama kişiye özel (farklı sağlayıcı/valör
+  kullananlar değiştirmeli).
+- **Etsy (işlem komisyonu + para birimi çevrim ücreti):** Çok kaynaklı/resmi
+  teyitli — yüksek güven. **Etsy (TR düzenleyici ücreti):** %1,67, resmi kaynağın
+  ülke tablosundan (10 Ağustos 2026, 2. tur) — ORTA-YÜKSEK güven (otomatik
+  özetleme aracıyla okundu, ham HTML birebir teyit edilmedi). **Etsy (ödeme
+  işleme oranı):** Türkiye için hiçbir kaynakta netleşmedi (tahmini %4, elle
   düzeltilebilir alan var).
+- **İade (return) maliyeti:** Kargo sorumluluğunun satıcıya geçtiği mevzuat
+  değişikliği (1 Ocak 2026) resmi haber kaynağıyla (AA) doğrulandı — YÜKSEK güven.
+  Ama "tipik iade oranı" hiçbir kaynakta standart bir rakam olarak bulunamadı —
+  bu yüzden varsayılan 0, kullanıcı kendi rakamını girer.
 - **Kargo (yurt içi tablo):** Navlungo Domestic 2026 teklif PDF'inden — Aras Kargo,
   isteğiniz üzerine listeden çıkarıldı.
-- **Kargo — platform kısıtları (YENİ, 10 Ağustos 2026):** `research/platform-kargo-kisitlari.md`.
+- **Kargo — platform kısıtları (10 Ağustos 2026):** `research/platform-kargo-kisitlari.md`.
   Trendyol resmi olarak KAPALI bir anlaşmalı kargo listesi kullanıyor (developers.trendyol.com);
   üç ikincil kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için %35'e varan farkla
   ayrışıyor — DÜŞÜK güven, override alanı önerilir. Amazon'un satıcı-gönderimli

@@ -17,8 +17,9 @@
 
   var el = {};
   ['cost', 'sector', 'margin', 'carrier', 'desi', 'dimW', 'dimD', 'dimH', 'dimApply',
-    'carrierNote', 'ads', 'amazonOverride', 'trendyolOverride', 'trendyolKargoOverride',
-    'shopifyPlan', 'shopifyUnits', 'etsyKargo',
+    'carrierNote', 'ads', 'iadeOrani', 'iadeMaliyet',
+    'amazonOverride', 'trendyolOverride', 'trendyolKargoOverride', 'trendyolHizmetBedeli',
+    'shopifyPlan', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY', 'shopifyUnits', 'etsyKargo',
     'etsyPayment', 'etsyOffsite', 'etsyOverThreshold', 'etsyThresholdWrap',
     'summary', 'summaryText', 'results', 'notesList', 'liveBar',
     'savedListBtn', 'savedCount', 'saveTrigger',
@@ -103,10 +104,15 @@
       marginPct: parseFloat(el.margin.value) || 0,
       kargoTRY: kargoTRY,
       reklamTRY: parseFloat(el.ads.value) || 0,
+      iadeOraniPct: parseFloat(el.iadeOrani.value) || 0,
+      iadeMaliyetTRY: parseFloat(el.iadeMaliyet.value) || 0,
       amazonOverridePct: el.amazonOverride.value === '' ? null : parseFloat(el.amazonOverride.value),
       trendyolOverridePct: el.trendyolOverride.value === '' ? null : parseFloat(el.trendyolOverride.value),
       trendyolKargoOverrideTRY: el.trendyolKargoOverride.value === '' ? null : parseFloat(el.trendyolKargoOverride.value),
+      trendyolHizmetBedeliTRY: el.trendyolHizmetBedeli.value === '' ? null : parseFloat(el.trendyolHizmetBedeli.value),
       shopifyPlanId: el.shopifyPlan.value,
+      shopifyGatewayPct: el.shopifyGatewayPct.value === '' ? null : parseFloat(el.shopifyGatewayPct.value),
+      shopifyGatewayFixedTRY: parseFloat(el.shopifyGatewayFixedTRY.value) || 0,
       shopifyMonthlyUnits: parseFloat(el.shopifyUnits.value) || 0,
       etsyKargoTRY: parseFloat(el.etsyKargo.value) || 0,
       etsyPaymentPct: el.etsyPayment.value === '' ? null : parseFloat(el.etsyPayment.value),
@@ -246,6 +252,12 @@
       'Etsy kargo: satışlar genelde yurt dışına gittiği için soldaki yurt içi kargo tablosu Etsy\'ye HİÇ uygulanmıyor — Etsy kendi ayrı kargo alanını kullanır, boş/0 bırakılırsa fiyat olduğundan düşük çıkar. Taşıyıcı seçimi serbest (DHL/UPS/FedEx/PTT Yurtdışı/Navlungo vb.); tek bir güvenilir ortalama uluslararası tarife bulunamadığı için (hedef ülkeye, ağırlığa ve taşıyıcıya göre çok değişken) gerçek teklifinizi girmeniz gerekir.',
       'Kur anlık görüntüsü ' + KH.FX.date + ' tarihli (doviz.com + xe.com çapraz kontrollü). Uzun vadede canlı bir kur API\'sine bağlanmalı.',
       'Reklam gideri kalemi araştırılmadı — kullanıcı tarafından girilir.',
+      'KOMİSYON/KDV TABANI SORUSU ÇÖZÜLDÜ (10 Ağustos 2026, 2. tur araştırma): Amazon komisyonu müşterinin ödediği TOPLAM (KDV dahil) tutar üzerinden hesaplanıp üzerine ayrıca %20 KDV ekleniyor (resmi kaynak: satis.amazon.com.tr/ucretlendirme) — mevcut "pct × 1,20" formülü zaten DOĞRUYMUŞ. Trendyol\'da ise komisyon KDV-hariç tabana uygulanıp üzerine KDV ekleniyor; bu matematiksel olarak brüt fiyatın doğrudan yüzdesine sadeleşiyor, yani Trendyol\'un mevcut formülü de zaten DOĞRUYMUŞ. İki platform farklı sözleşme tabanı kullanıyor ama ikisi de koda halihazırda doğru yansımış — bug yoktu.',
+      'Trendyol\'un komisyondan AYRI, sipariş başına sabit bir "platform hizmet bedeli" var: pazarfiyat.com kaynaklı, 30 Ocak 2026 tarihli iki kademeli yapı — "Bugün Kargoda" statüsündeki satıcılarda 6,99₺+KDV, diğerlerinde 10,99₺+KDV (iade sevkiyatlarına uygulanmıyor). Varsayılan olarak yüksek/muhafazakâr kademe kullanıldı (₺13,19); "Trendyol → Hizmet bedeli" alanından değiştirilebilir.',
+      'Shopify Payments Türkiye\'de kullanılamıyor (Shopify\'ın kendi TR blogu + ikinci bir kaynakla doğrulandı) — bu yüzden hesaplayıcı artık Shopify\'ın kendi kart oranı yerine, kullanıcının yerel ödeme sağlayıcısından (iyzico/PayTR/banka sanal POS vb.) girdiği oran + Shopify\'ın plana göre eklediği "dış sağlayıcı" ek ücretini (Basic %2 / Grow %1 / Advanced %0,6 — resmi kaynak) topluyor. Varsayılan oran (%2,65) bu aracın kullanıcısının kendi sağlayıcısından ekran görüntüsüyle bildirdiği gerçek rakam (15 gün valörlü) — genel bir piyasa tahmini değil.',
+      'Etsy\'nin resmi "Currency Conversion Fee"si (%2,5) eklendi — help.etsy.com kaynaklı, YÜKSEK güven. Listeleme/ödeme para birimleri farklı olduğunda (bu araç Etsy fiyatlarını USD üzerinden TL\'ye çevirdiği için) uygulanır.',
+      'İade (return) beklenen maliyeti: 1 Ocak 2026\'dan itibaren mesafeli satış sözleşmeleri yönetmeliğindeki değişiklikle, cayma hakkı kapsamındaki iade kargosu artık SATICIYA ait. "İade oranı% × iade başına maliyet" olarak beklenen değer formülüyle Amazon/Trendyol/Shopify\'ın fiyatına ekleniyor (Etsy hariç — satışları ağırlıkla yurt dışına gidiyor, farklı bir tüketici-hukuku kapsamına giriyor). Türkiye e-ticaretinde bunun için standart bir yüzde/sabit değer bulunamadı (kategoriye göre araştırmalarda %18-%70 arası rakamlar görüldü); bu yüzden ikisi de varsayılan 0 — kendi tahmininizi girmezseniz hesaba hiç girmez.',
+      'Etsy\'nin Türkiye için düzenleyici işletim ücreti (regulatory operating fee) %2,27\'den %1,67\'ye DÜZELTİLDİ: resmi kaynağın (help.etsy.com) ülke bazlı tablosu doğrudan çekilip Türkiye satırı okundu (iki bağımsız çekimde de aynı sonuç). Rakip iki üçüncül kaynak hâlâ farklı değerler veriyor (%2,27 ve belirsiz bir "%0,32-%1,15" aralığı) ama ikisi de resmi sayfa değil; bu yüzden resmi kaynağa güvenildi. Kalan küçük belirsizlik: sayfa bir otomatik özetleme aracıyla okundu, ham HTML birebir teyit edilmedi — kesinlik için kendi Etsy satıcı panelinizden (Ödemeler → Ücretler) teyit edebilirsiniz.',
       'Kayıtlı ürünler bu tarayıcının kendi cihaz-içi veritabanında (IndexedDB) tutulur — sunucuya gönderilmez, başka bir cihazdan/tarayıcıdan görünmez, tarayıcı verisi temizlenirse silinir.'
     ];
     el.notesList.innerHTML = notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
