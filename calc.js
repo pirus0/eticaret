@@ -259,7 +259,7 @@
     (function () {
       var pct = input.trendyolOverridePct != null ? input.trendyolOverridePct : (sector ? sector.trendyol : null);
       if (pct == null) {
-        results.trendyol = { unavailable: true, reason: 'Bu sektör için Trendyol oranı yok — satıcı panelinizden kontrol edip elle girin.' };
+        results.trendyol = { unavailable: true, reason: 'Bu sektör için Trendyol oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
         return;
       }
       var fixed = input.costTRY + input.kargoTRY + input.reklamTRY;

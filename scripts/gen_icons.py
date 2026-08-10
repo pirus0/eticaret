@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""PWA ikonlarini uretir: indigo (#4338CA) zemin + beyaz '%' glifi.
+"""PWA ikonlarini uretir: ink (#17160F) zemin + kagit rengi serif '%' glifi.
+Marka rengi mürekkep/kağıt paletiyle eşleşsin diye styles.css'teki --ink ile
+aynı tonu kullanır; glif serif (DejaVu Serif Bold) — sitedeki başlık/rakam
+tipografisiyle tutarlı olsun diye.
 Kullanim: python3 scripts/gen_icons.py  (kar-hesap/ klasorunden calistirin)
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-BRAND = (67, 56, 202, 255)   # #4338CA
-WHITE = (255, 255, 255, 255)
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+BRAND = (23, 22, 15, 255)    # #17160F (--ink)
+WHITE = (245, 243, 236, 255) # #F5F3EC (--paper)
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "icons")
 
 

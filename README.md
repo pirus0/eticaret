@@ -1,7 +1,7 @@
 # Kâr Marjı Hesaplayıcı
 
 Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, Shopify ve Etsy'de
-o hedefe ulaşmak için gereken satış fiyatını — komisyon, kargo ve (elle girilen) reklam
+o hedefe ulaşmak için gereken satış fiyatını — komisyon, kargo ve (opsiyonel) reklam
 giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir PWA (telefona
 "uygulama gibi" eklenebilen web aracı).
 
@@ -10,10 +10,11 @@ Build adımı yok. Sunucu tarafı yok. Tüm hesaplama tarayıcıda, `calc.js` i�
 ## Klasördeki dosyalar
 
 ```
-index.html          Form + sonuç kartlarının HTML iskeleti
-styles.css           Görünüm (mobil öncelikli)
+index.html          Form + sonuç kartlarının + diyalogların HTML iskeleti
+styles.css           Görünüm (mobil öncelikli, bkz. aşağıdaki "Tasarım" bölümü)
 calc.js               Tüm oranlar/kargo tabloları/kur + hesaplama mantığı (KH namespace)
-app.js                 Formu calc.js'e bağlayan DOM kodu, canlı yeniden hesaplama
+storage.js             Kayıtlı ürünler için IndexedDB katmanı (KHStore namespace)
+app.js                 DOM kodu: canlı yeniden hesaplama, kaydırma animasyonları, kayıt akışı
 manifest.json      PWA manifesti (isim, ikonlar, tema rengi, standalone mod)
 sw.js                    Service worker — "ağ öncelikli" önbellekleme (aşağıya bakın)
 icons/                 PWA ikonları (favicon, apple-touch-icon, 192/512, maskable)
@@ -22,6 +23,43 @@ scripts/gen_icons.py         İkonları yeniden üretmek için Python/Pillow bet
 scripts/verify_ui.py           Gerçek tarayıcıda (Playwright) uçtan uca UI doğrulaması
 research/              Oranların dayandığı kaynak notları (tarih + link + güven seviyesi)
 ```
+
+## Tasarım
+
+Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/Shopify/Etsy'yi ayırt eden
+4 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan yok, "otomatik"
+seçilmiş bir SaaS-mor teması yok. O 4 renk de göz kararı seçilmedi: `dataviz`
+paletinin çift-çift-ayırt-edilebilirlik doğrulayıcısından geçirildi (gerçek marka
+renkleri denendiğinde Amazon/Trendyol/Etsy'nin üçü de turuncu ailesinde çıkıp
+`normal-vision ΔE 13.7` ile başarısız oldu — bkz. git geçmişindeki ilgili commit).
+
+Başlıklar ve büyük fiyat rakamları serif (Georgia), arayüz elemanları sans —
+tek bir marka rengi yerine bu tipografik kontrastla "tasarlanmış" hissi kuruluyor.
+Kartlar gölge değil ince (hairline) çizgiyle ayrılıyor.
+
+Sayfa kaydırıldıkça bölümler (`[data-reveal]` işaretli elemanlar) IntersectionObserver
+ile belirir — sayfa yüklenir yüklenmez her şeyin birden görünmesi yerine, aşağı
+indikçe animasyon da devam ediyor. Üstteki sabit şerit kaydırınca sıkışıyor (başlık
+küçülüyor). `prefers-reduced-motion` açık olan kullanıcılarda tüm bu animasyonlar
+otomatik devre dışı kalıyor.
+
+## Kayıtlı ürünler
+
+Özet şeridindeki yer imi (bookmark) ikonuyla o anki hesaplama — ürün adı, satış için
+öncelikli platform, isteğe bağlı bir görsel ve 4 platformun da hesaplanan fiyatlarıyla
+birlikte — kaydedilebiliyor. Header'daki (sağ üst) ikinci yer imi ikonu kayıtlı
+ürünler panelini açıyor; buradan inceleyip silebilirsiniz.
+
+Önemli sınırlama: backend yok, bu yüzden kayıtlar tarayıcının kendi IndexedDB
+veritabanında tutuluyor. Yani kayıtlar **sadece o an kullandığınız tarayıcı/cihazda**
+duruyor — farklı bir tarayıcıdan, telefondan veya "gizli sekme"den açtığınızda
+görünmezler, tarayıcı verisini temizlerseniz silinirler. Cihazlar arası senkron
+istiyorsanız bir backend (ör. basit bir Supabase/Firebase tablosu) eklenmesi gerekir
+— şu anki statik-site kapsamının dışında.
+
+Görseller IndexedDB'ye yazılmadan önce tarayıcıda (canvas ile) en fazla 640px kenar
+uzunluğuna küçültülüp JPEG'e çevriliyor — telefon kamerasından gelen 5-10MB'lık bir
+fotoğraf veritabanını şişirmesin diye.
 
 ## Nasıl çalıştırılır
 
@@ -62,8 +100,9 @@ Bir değeri değiştirdikten sonra `node test.js` çalıştırıp hâlâ "TÜM T
 çıktığını görmeniz yeterli (mantık testleri elle hesaplanmış örneklerle karşılaştırıyor,
 oranların kendisini değil hesaplama mantığının doğruluğunu kontrol ediyor).
 
-İkonları değiştirmek isterseniz `scripts/gen_icons.py`'deki `BRAND` rengini veya
-glif karakterini (`"%"`) değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
+İkonları değiştirmek isterseniz `scripts/gen_icons.py`'deki `BRAND` rengini (şu an
+`styles.css`'teki `--ink` ile aynı `#17160F`) veya glif karakterini (`"%"`)
+değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
 
 ## Kaynak güvenilirliği — önemli
 
@@ -73,8 +112,8 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
 - **Amazon.com.tr:** Resmi kaynak (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026
   tarifesi — yüksek güven.
 - **Trendyol:** Amazon gibi tek/resmi bir oran sayfası yok. 4 bağımsız kaynaktan
-  derlenen YAKLAŞIK değerler kullanılıyor — arayüzde "elle gir" alanı var, kendi
-  satıcı panelinizdeki gerçek oranı girmeniz önerilir.
+  derlenen YAKLAŞIK değerler kullanılıyor — arayüzde bunun yerine kendi satıcı
+  panelinizdeki gerçek oranı yazabileceğiniz opsiyonel bir alan var.
 - **Shopify:** Resmi kaynak (shopify.com/pricing) — yüksek güven, USD'den güncel
   kur anlık görüntüsüyle TL'ye çevrildi.
 - **Etsy:** İşlem komisyonu ve TR düzenleyici ücreti çok kaynaklı teyitli; ödeme
@@ -89,8 +128,9 @@ açılır panel) aynı uyarıları gösteriyor.
 ## Reklam gideri alanı
 
 "Reklam gideri (₺)" alanı bilinçli olarak araştırılmadı/varsayılan değer verilmedi —
-kâr hesabına dahil edilecek reklam maliyetini siz elle gireceksiniz (Etsy'nin zorunlu
-Offsite Ads ücretinden ayrı bir kalem; o ayrıca kendi onay kutusuyla hesaba giriyor).
+opsiyonel bir alan, kâr hesabına dahil edilecek reklam maliyetini istediğinizde siz
+belirlersiniz (Etsy'nin zorunlu Offsite Ads ücretinden ayrı bir kalem; o ayrıca kendi
+onay kutusuyla hesaba giriyor).
 
 ## Test etme
 
