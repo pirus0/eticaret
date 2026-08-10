@@ -144,5 +144,50 @@ console.log('Amazon:', noData.amazon.unavailable ? noData.amazon.reason : noData
 console.log('Trendyol:', noData.trendyol.price);
 if (!noData.amazon.unavailable) { console.log('FAIL: Amazon icin "unavailable" bekleniyordu'); failures++; }
 
+// --- 10 Ağustos 2026, bug audit'i: dilimli (tiered) Amazon kategorisinde
+// kendiyle TUTARSIZ bir fiyat/oran döndüren yakınsama hatası (taki sektörü,
+// ≤900₺:%20 / >900₺:%6 — fiyat arttıkça oran DÜŞÜYOR). Eski kod tek bir
+// düzeltme adımıyla sınırlıydı ve bu dar bantta fiyat=785,02₺ + %6 komisyon
+// döndürüyordu, ama 785,02₺ ≤ 900₺ olduğu için GERÇEKTE %20 uygulanır —
+// satıcı gerçekte zarar ederdi. Yeni kod bunu tierAmbiguous:true ile
+// işaretleyip daha güvenli (yüksek fiyat/oran) adayı seçmeli.
+var ambiguousTier = KH.computeAll({ costTRY: 650, sectorId: 'taki', marginPct: 10, kargoTRY: 0, reklamTRY: 0, shopifyPlanId: 'basic' });
+console.log('\n--- Takı, maliyet=650, hedefKâr=10% (kademe sınırında salınım bandı) ---');
+console.log('Amazon:', ambiguousTier.amazon.price, 'kullanılan %', ambiguousTier.amazon.usedPct, 'tierAmbiguous:', ambiguousTier.amazon.tierAmbiguous);
+// Bu bant TANIM GEREĞİ kendiyle tutarlı DEĞİL (iki aday da kendi varsayımıyla
+// çelişiyor — bkz. calc.js solveTieredAmazon yorumu) — bu yüzden tutarlılık
+// değil, "iki adaydan yüksek fiyatlı/muhafazakâr olanın seçildiği" doğrulanıyor:
+// pct=20 adayı (fiyat 984,85₺) pct=6 adayına (fiyat 785,02₺) göre daha yüksek.
+check('Salınım bandında MUHAFAZAKÂR (yüksek fiyatlı) aday seçiliyor', ambiguousTier.amazon.price, 650 / (1 - (20 * 1.20 + 10) / 100), 0.5);
+check('Salınım bandında kullanılan oran, muhafazakâr adayın oranı (%20)', ambiguousTier.amazon.usedPct, 20);
+if (!ambiguousTier.amazon.tierAmbiguous) { console.log('FAIL: tierAmbiguous=true bekleniyordu (kendiyle tutarlı hiçbir fiyat olmayan bir bant)'); failures++; }
+else console.log('OK   tierAmbiguous doğru şekilde işaretlendi');
+// Aynı bandın DIŞINDA (kozmetik gibi ilerleyen/progressive bir dilim yapısında)
+// hâlâ normal şekilde (salınım/işaret olmadan) yakınsadığını doğrula.
+var normalTier = KH.computeAll({ costTRY: 300, sectorId: 'kozmetik', marginPct: 15, kargoTRY: 0, reklamTRY: 0, shopifyPlanId: 'basic' });
+if (normalTier.amazon.tierAmbiguous) { console.log('FAIL: kozmetik (ilerleyen dilim) yanlışlıkla tierAmbiguous işaretlendi'); failures++; }
+else console.log('OK   İlerleyen dilim yapısı (kozmetik) normal şekilde yakınsıyor, işaret yok');
+
+// --- 10 Ağustos 2026, bug audit'i: negatif girdi savunması ---
+// HTML min="0" JS'te hiçbir şeyi engellemiyor — kullanıcı elle negatif bir
+// sayı yazıp tabladıysa, calc.js bunu artık sessizce 0'a kırpmalı (negatif
+// bir "indirim" gibi davranıp fiyatı düşürmemeli).
+var negBaseline = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+var negCost = KH.computeAll({ costTRY: -1000, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+check('Negatif costTRY 0\'a kırpılıyor (maliyet=0 ile aynı sonuç)',
+      negCost.amazon.price, KH.computeAll({ costTRY: 0, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' }).amazon.price, 0.01);
+var negIade = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', iadeOraniPct: -50, iadeMaliyetTRY: 100 });
+check('Negatif iadeOraniPct fiyatı DÜŞÜRMÜYOR (0 ile aynı sonuç)', negIade.amazon.price, negBaseline.amazon.price, 0.01);
+var negKargoOverride = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', trendyolKargoOverrideTRY: -5000 });
+check('Negatif trendyolKargoOverrideTRY 0\'a kırpılıyor (eksi kargo maliyeti üretmiyor)',
+      negKargoOverride.trendyol.price, KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', trendyolKargoOverrideTRY: 0 }).trendyol.price, 0.01);
+
+// --- 10 Ağustos 2026, bug audit'i: %100'e çok yakın (ama altında) oran
+// toplamları artık da hata vermeli — matematiksel olarak hesaplanabilir olsa
+// bile sonuç gerçekçi bir fiyat değil (payda sıfıra çok yaklaşıyor). ---
+var nearCeiling = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 81.39, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+if (!nearCeiling.amazon.error) { console.log('FAIL: %100\'e çok yakın oran toplamında hata bekleniyordu, fiyat döndü:', nearCeiling.amazon.price); failures++; }
+else console.log('OK   %100\'e yakın (ama altında) oran toplamı da doğru şekilde reddediliyor');
+
 console.log('\n' + (failures === 0 ? 'TÜM TESTLER GEÇTİ' : failures + ' TEST BAŞARISIZ'));
 process.exit(failures === 0 ? 0 : 1);

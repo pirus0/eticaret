@@ -265,9 +265,28 @@
   // fixedTRY: sabit TL maliyetler toplamı (maliyet+kargo+reklam+platforma özel sabit ücretler)
   // percentages: [{label, pct}] yüzdesel kesintiler (komisyon, işlem ücreti, hedef kâr dahil)
   function solvePrice(fixedTRY, percentages) {
+    // Savunma: negatif bir sabit maliyet veya negatif bir yüzde, anlamsız
+    // (ör. negatif) bir fiyata yol açar. index.html'deki min="0" HTML özniteliği
+    // JS tarafında hiçbir şeyi engellemiyor (kullanıcı yine de "-50" yazabilir),
+    // ve app.js'in readInput()'u zaten girişleri 0'a kırpıyor — ama calc.js
+    // doğrudan (testlerde, Node'da veya ileride başka bir arayüzden) de
+    // çağrılabildiği için tek ortak nokta olan burada da savunma var (10 Ağustos
+    // 2026 audit'inde tespit edildi: negatif kargo/iade gibi değerler hiçbir
+    // uyarı vermeden negatif/anlamsız fiyatlar üretiyordu).
+    fixedTRY = Math.max(0, fixedTRY || 0);
+    percentages = percentages.map(function (p) {
+      return { label: p.label, pct: Math.max(0, p.pct || 0) };
+    });
     var totalPct = percentages.reduce(function (sum, p) { return sum + p.pct; }, 0);
-    if (totalPct >= 100) {
-      return { error: 'Girilen oranların toplamı (%' + totalPct.toFixed(1) + ') %100\'ü geçiyor veya eşitliyor — bu maliyet ve kâr hedefiyle hiçbir satış fiyatı bu oranları karşılayamaz.' };
+    // Üst sınır kasıtlı olarak 100 değil 95 — %100'de payda sıfırlanıp matematiksel
+    // olarak imkânsız hale geliyor, ama %95-99,99 aralığı da TEKNİK OLARAK
+    // hesaplanabilir olsa bile pratikte anlamsız: payda sıfıra çok yaklaştığı için
+    // küçük bir girdi farkı fiyatı orantısız büyütüyor (audit'te doğrulandı: %99,99
+    // toplamda 150₺'lik bir sabit maliyet ~1,5 milyon TL'lik bir "fiyat" üretiyordu).
+    // Bu, gerçek bir satış fiyatı değil, kullanıcının muhtemelen yanlış bir oran/hedef
+    // girdiğinin işaretidir — sessizce absürt bir sayı göstermek yerine erken uyarıyoruz.
+    if (totalPct >= 95) {
+      return { error: 'Girilen oranların toplamı (%' + totalPct.toFixed(1) + ') çok yüksek (≥%95) — bu maliyet ve kâr hedefiyle güvenilir bir satış fiyatı hesaplanamıyor (yüzde 100\'e yaklaştıkça küçük farklar fiyatı orantısız büyütür, %100\'de veya üzerinde matematiksel olarak imkânsız hale gelir). Oranları veya hedef kârı gözden geçirin.' };
     }
     var price = fixedTRY / (1 - totalPct / 100);
     var breakdown = percentages.map(function (p) {
@@ -278,7 +297,30 @@
 
   function round2(n) { return Math.round(n * 100) / 100; }
 
-  function computeAll(input) {
+  // Negatif ₺ tutarları/yüzdeleri (HTML min="0" JS'te hiçbir şeyi engellemiyor —
+  // kullanıcı elle "-50" yazıp tabladıysa geçer) hesaplamanın başında (ör. iade
+  // beklenen maliyeti gibi TÜRETİLMİŞ bir ara değerde) sızıp fiyatı yanlışlıkla
+  // düşürebiliyordu (10 Ağustos 2026 audit'inde tespit edildi — solvePrice()'ın
+  // kendi savunması tek başına YETERSİZ kaldı çünkü negatif bir bileşen, toplam
+  // pozitif kalsa bile sonucu sessizce çarpıtıyor). Bu yüzden computeAll()'a giren
+  // TÜM sayısal alanlar, herhangi bir platform hesabına karışmadan ÖNCE burada
+  // tek noktadan 0'a kırpılıyor.
+  var NON_NEGATIVE_FIELDS = [
+    'costTRY', 'marginPct', 'kargoTRY', 'reklamTRY', 'iadeOraniPct', 'iadeMaliyetTRY',
+    'amazonOverridePct', 'trendyolOverridePct', 'trendyolKargoOverrideTRY',
+    'trendyolHizmetBedeliTRY', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY',
+    'shopifyMonthlyUnits', 'etsyKargoTRY', 'etsyPaymentPct'
+  ];
+  function sanitizeInput(raw) {
+    var out = {};
+    Object.keys(raw || {}).forEach(function (k) { out[k] = raw[k]; });
+    NON_NEGATIVE_FIELDS.forEach(function (k) {
+      if (typeof out[k] === 'number') out[k] = Math.max(0, out[k]);
+    });
+    return out;
+  }
+
+  function computeAll(rawInput) {
     // input: { costTRY, sectorId, marginPct, kargoTRY, reklamTRY, shopifyPlanId,
     //   etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct,
     //   amazonOverridePct, trendyolKargoOverrideTRY, etsyKargoTRY,
@@ -289,55 +331,86 @@
     // etsyKargoTRY: Etsy'ye özel, kargoTRY'den bağımsız (bkz. dosya başındaki not).
     // iadeOraniPct/iadeMaliyetTRY: Amazon/Trendyol/Shopify'a uygulanan beklenen
     // iade maliyeti (oran% × maliyet); Etsy'ye UYGULANMAZ (bkz. dosya başı notu).
+    var input = sanitizeInput(rawInput);
     var sector = SECTORS.filter(function (s) { return s.id === input.sectorId; })[0];
     var results = {};
     var iadeBeklenenMaliyetTRY = ((input.iadeOraniPct || 0) / 100) * (input.iadeMaliyetTRY || 0);
 
     // --- AMAZON ---
     (function () {
-      var basePct = input.amazonOverridePct != null ? input.amazonOverridePct : (sector ? resolveRate(sector.amazon, 9999) : null);
-      // Not: tiered kategoriler için basePct'i P bilinmeden tam çözemeyiz (P'ye bağlı).
-      // Pratik çözüm: önce üst dilim oranıyla dene, çıkan fiyat dilim sınırının altında
-      // kalırsa alt dilim oranıyla yeniden hesapla (iteratif/2 adımlı çözüm yeterli).
       if (!sector || sector.amazon == null) {
         results.amazon = { unavailable: true, reason: 'Bu sektör için Amazon oranı bulunamadı.' };
         return;
       }
-      var pct = input.amazonOverridePct != null ? input.amazonOverridePct : resolveTieredWithFeedback(sector.amazon);
+      // kargoTRY burada satıcı-gönderimli (kendi kargo firmanız) senaryoyu
+      // varsayıyor — Amazon bunu serbest bırakıyor. FBA/Kolay Gönderi kapsam dışı.
+      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + iadeBeklenenMaliyetTRY;
       // Amazon komisyonu MÜŞTERİNİN ÖDEDİĞİ TOPLAM (KDV dahil) tutar üzerinden
       // hesaplanıyor, üzerine ayrıca %20 KDV ekleniyor — resmi kaynakla doğrulandı
       // (satis.amazon.com.tr/ucretlendirme, 10 Ağustos 2026). Bu yüzden P'ye
       // doğrudan pct*1.20 uygulamak DOĞRU (Trendyol'daki KDV-hariç-taban mantığıyla
       // KARIŞTIRILMAMALI — iki platformun sözleşme tabanı farklı, bkz. dosya başı notu).
-      var effectivePct = pct * 1.20;
-      // kargoTRY burada satıcı-gönderimli (kendi kargo firmanız) senaryoyu
-      // varsayıyor — Amazon bunu serbest bırakıyor. FBA/Kolay Gönderi kapsam dışı.
-      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + iadeBeklenenMaliyetTRY;
-      var r = solvePrice(fixed, [
-        { label: 'Komisyon (+KDV)', pct: effectivePct },
-        { label: 'Hedef kâr', pct: input.marginPct }
-      ]);
-      // Tiered kategori ise gerçek fiyata göre oranı tekrar kontrol et.
-      if (!r.error && sector.amazon && sector.amazon.tiers && input.amazonOverridePct == null) {
-        var realPct = resolveRate(sector.amazon, r.price);
-        if (realPct !== pct) {
-          var effectivePct2 = realPct * 1.20;
-          r = solvePrice(fixed, [
-            { label: 'Komisyon (+KDV)', pct: effectivePct2 },
-            { label: 'Hedef kâr', pct: input.marginPct }
-          ]);
-          pct = realPct;
-        }
+      var r;
+      if (input.amazonOverridePct != null || typeof sector.amazon === 'number') {
+        var flatPct = input.amazonOverridePct != null ? input.amazonOverridePct : sector.amazon;
+        r = solvePrice(fixed, [
+          { label: 'Komisyon (+KDV)', pct: flatPct * 1.20 },
+          { label: 'Hedef kâr', pct: input.marginPct }
+        ]);
+        r.usedPct = flatPct;
+      } else {
+        r = solveTieredAmazon(sector.amazon, fixed, input.marginPct);
       }
-      r.usedPct = pct;
       results.amazon = r;
-
-      function resolveTieredWithFeedback(rate) {
-        if (typeof rate === 'number') return rate;
-        // İlk tahmin için en düşük dilim sınırındaki oranı kullan (çoğu ürün için makul başlangıç).
-        return rate.tiers[0][1];
-      }
     })();
+
+    // Dilimli (tiered) Amazon kategorileri için: doğru komisyon dilimi fiyata (P)
+    // bağlı, P de dilime bağlı — bu yüzden P → dilim → yeni P → ... şeklinde bir
+    // SABİT NOKTAYA (fixed point) yakınsayana kadar tekrar çözüyoruz (çoğu durumda
+    // 1-2 adımda yakınsar; eski kod tek bir düzeltme adımıyla sınırlıydı, bu da
+    // 2'den fazla adım gerektiren durumlarda erken durup yanlış dilimde kalabiliyordu).
+    // Bazı dar durumlarda (özellikle fiyat arttıkça oranın DÜŞTÜĞÜ dilim yapılarında,
+    // ör. Takı/Mücevher: ≤900₺ için %20, >900₺ için %6) kendiyle tutarlı HİÇBİR fiyat
+    // olmayabilir — döngü iki aday arasında sonsuza dek salınır. Böyle bir salınım
+    // tespit edilirse, satıcıyı daha güvende bırakan (daha yüksek fiyat/oran gerektiren)
+    // adayı seçip sonucu `tierAmbiguous: true` ile işaretliyoruz; app.js bunu görünür
+    // bir uyarıya çeviriyor — sessizce yanlış/tutarsız bir sayı göstermek yerine.
+    // Doğrulandı (10 Ağustos 2026 audit): costTRY=650, sector='taki', marginPct=10
+    // eski kodda price=785,02 + %6 komisyon döndürüyordu, ama 785,02₺ ≤ 900₺ olduğu
+    // için gerçekte %20 komisyon uygulanır — satıcı gerçekte zarar ederdi.
+    function solveTieredAmazon(rate, fixed, marginPct) {
+      var pct = rate.tiers[0][1]; // ilk tahmin: en düşük fiyat dilimindeki oran
+      var seenPcts = {};
+      var candidates = [];
+      var maxIter = 8;
+      for (var i = 0; i < maxIter; i++) {
+        var attempt = solvePrice(fixed, [
+          { label: 'Komisyon (+KDV)', pct: pct * 1.20 },
+          { label: 'Hedef kâr', pct: marginPct }
+        ]);
+        if (attempt.error) { attempt.usedPct = pct; return attempt; }
+        candidates.push({ pct: pct, price: attempt.price, result: attempt });
+        var realPct = resolveRate(rate, attempt.price);
+        if (realPct === pct) {
+          // Sabit nokta: bu oranla çözülen fiyat, gerçekten o oranın uygulandığı
+          // dilimde — tutarlı.
+          attempt.usedPct = pct;
+          return attempt;
+        }
+        if (seenPcts[realPct] != null || i === maxIter - 1) {
+          // Salınım tespit edildi (daha önce görülen bir orana geri dönüldü) ya da
+          // iterasyon sınırına ulaşıldı — kendiyle tutarlı bir fiyat yok. Adaylar
+          // arasında en yüksek fiyatı (dolayısıyla en yüksek/muhafazakâr oranı) seç.
+          var conservative = candidates[0];
+          candidates.forEach(function (c) { if (c.price > conservative.price) conservative = c; });
+          conservative.result.usedPct = conservative.pct;
+          conservative.result.tierAmbiguous = true;
+          return conservative.result;
+        }
+        seenPcts[pct] = true;
+        pct = realPct;
+      }
+    }
 
     // --- TRENDYOL ---
     (function () {

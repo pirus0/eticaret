@@ -34,14 +34,19 @@
   var lastResults = null;  // en son KH.computeAll() çıktısı
   var pendingImageDataUrl = null; // kaydet formunda seçilen (yeniden boyutlandırılmış) görsel
 
+  // Intl formatter'lari modul kapsamina alindi — her cagrida yeniden
+  // olusturmak (onceki hali) gereksiz maliyetliydi; sonuc degismez.
+  var TRY_FORMATTER = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 });
+  var DATE_FORMATTER = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
   function fmtTRY(n) {
     if (n == null || isNaN(n)) return '—';
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2 }).format(n);
+    return TRY_FORMATTER.format(n);
   }
 
   function fmtDate(ts) {
     try {
-      return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
+      return DATE_FORMATTER.format(new Date(ts));
     } catch (e) {
       return '';
     }
@@ -81,8 +86,25 @@
     });
   }
 
+  // Sayısal alanlar için negatif olmayan okuma yardımcıları. HTML'deki min="0"
+  // özniteliği JS tarafında hiçbir şeyi ENGELLEMİYOR — kullanıcı yine de "-50"
+  // yazıp alandan çıkabilir. calc.js kendi tarafında da aynı kırpmayı yapıyor
+  // (tek kaynaktan çağrılmadığı ihtimaline karşı savunma), ama BURADA da
+  // kırpmazsak "Kaydet" anlık görüntüsü/kayıtlı ürün listesi gibi calc.js'i
+  // atlayan görüntüleme yerlerinde negatif bir sayı görünüp kafa karıştırabilir
+  // (10 Ağustos 2026 audit'inde tespit edildi).
+  function numOrZero(el) {
+    var n = parseFloat(el.value);
+    return isNaN(n) ? 0 : Math.max(0, n);
+  }
+  function numOrNull(el) {
+    if (el.value === '') return null;
+    var n = parseFloat(el.value);
+    return isNaN(n) ? null : Math.max(0, n);
+  }
+
   function readInput() {
-    var desi = parseFloat(el.desi.value) || 0;
+    var desi = numOrZero(el.desi);
     var carrierKey = el.carrier.value;
     var kargoTRY = 0;
     var carrierLabel = '';
@@ -99,23 +121,23 @@
     el.carrierNote.textContent = carrierLabel;
 
     return {
-      costTRY: parseFloat(el.cost.value) || 0,
+      costTRY: numOrZero(el.cost),
       sectorId: el.sector.value,
-      marginPct: parseFloat(el.margin.value) || 0,
+      marginPct: numOrZero(el.margin),
       kargoTRY: kargoTRY,
-      reklamTRY: parseFloat(el.ads.value) || 0,
-      iadeOraniPct: parseFloat(el.iadeOrani.value) || 0,
-      iadeMaliyetTRY: parseFloat(el.iadeMaliyet.value) || 0,
-      amazonOverridePct: el.amazonOverride.value === '' ? null : parseFloat(el.amazonOverride.value),
-      trendyolOverridePct: el.trendyolOverride.value === '' ? null : parseFloat(el.trendyolOverride.value),
-      trendyolKargoOverrideTRY: el.trendyolKargoOverride.value === '' ? null : parseFloat(el.trendyolKargoOverride.value),
-      trendyolHizmetBedeliTRY: el.trendyolHizmetBedeli.value === '' ? null : parseFloat(el.trendyolHizmetBedeli.value),
+      reklamTRY: numOrZero(el.ads),
+      iadeOraniPct: numOrZero(el.iadeOrani),
+      iadeMaliyetTRY: numOrZero(el.iadeMaliyet),
+      amazonOverridePct: numOrNull(el.amazonOverride),
+      trendyolOverridePct: numOrNull(el.trendyolOverride),
+      trendyolKargoOverrideTRY: numOrNull(el.trendyolKargoOverride),
+      trendyolHizmetBedeliTRY: numOrNull(el.trendyolHizmetBedeli),
       shopifyPlanId: el.shopifyPlan.value,
-      shopifyGatewayPct: el.shopifyGatewayPct.value === '' ? null : parseFloat(el.shopifyGatewayPct.value),
-      shopifyGatewayFixedTRY: parseFloat(el.shopifyGatewayFixedTRY.value) || 0,
-      shopifyMonthlyUnits: parseFloat(el.shopifyUnits.value) || 0,
-      etsyKargoTRY: parseFloat(el.etsyKargo.value) || 0,
-      etsyPaymentPct: el.etsyPayment.value === '' ? null : parseFloat(el.etsyPayment.value),
+      shopifyGatewayPct: numOrNull(el.shopifyGatewayPct),
+      shopifyGatewayFixedTRY: numOrZero(el.shopifyGatewayFixedTRY),
+      shopifyMonthlyUnits: numOrZero(el.shopifyUnits),
+      etsyKargoTRY: numOrZero(el.etsyKargo),
+      etsyPaymentPct: numOrNull(el.etsyPayment),
       etsyOffsiteAds: el.etsyOffsite.checked,
       etsyOverThreshold: el.etsyOverThreshold.checked
     };
@@ -138,6 +160,7 @@
         '<p class="price"></p>' +
         '<p class="muted pct"></p>' +
         '<p class="muted sub"></p>' +
+        '<p class="warn"></p>' +
         '<ul class="breakdown"></ul>' +
         '<p class="error"></p>';
       el.results.appendChild(card);
@@ -146,6 +169,7 @@
         price: card.querySelector('.price'),
         pct: card.querySelector('.pct'),
         sub: card.querySelector('.sub'),
+        warn: card.querySelector('.warn'),
         breakdown: card.querySelector('.breakdown'),
         error: card.querySelector('.error')
       };
@@ -165,6 +189,7 @@
         setText(ref.price, '', false);
         ref.pct.textContent = '';
         ref.sub.textContent = '';
+        ref.warn.textContent = '';
         ref.breakdown.innerHTML = '';
         ref.error.textContent = r.unavailable ? r.reason : r.error;
         return;
@@ -176,6 +201,7 @@
       ref.error.textContent = '';
       ref.pct.textContent = r.usedPct != null ? ('Kullanılan oran: %' + r.usedPct.toFixed(2).replace(/\.00$/, '')) : '';
       ref.sub.textContent = r.monthlySubTRY ? ('+ aylık abonelik payı: ' + fmtTRY(r.monthlySubTRY) + '/birim') : '';
+      ref.warn.textContent = r.tierAmbiguous ? '⚠ Bu fiyat, komisyon kademesinin sınırına çok yakın bir bantta — kendiyle tam tutarlı değil, daha güvenli (yüksek) taraf seçildi. Amazon panelinizden gerçek oranı teyit edin.' : '';
 
       var bhtml = '<li><span>Maliyet + kargo + reklam + sabit ücretler</span><span>' + fmtTRY(r.fixedTRY) + '</span></li>';
       r.breakdown.forEach(function (b) {
@@ -230,7 +256,6 @@
     lastResults = KH.computeAll(lastInput);
     renderResults(lastResults);
     updateLiveBar(lastResults);
-    updateStickyOffset();
   }
 
   function applyDims() {
@@ -245,10 +270,10 @@
     var notes = [
       'Kargo verisi Navlungo Domestic 2026 teklifinden — Aras Kargo kullanıcı isteğiyle listeden çıkarıldı. Tüm kargo fiyatlarına KDV+EPH dahildir. Bu tablo Amazon (satıcı-gönderimli), Shopify ve Trendyol\'un varsayılanı için kullanılır — Etsy\'de kullanılmaz (aşağıya bakın).',
       'Amazon.com.tr oranları resmi kaynaktan (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026 tarifesi. Komisyon üzerine ayrıca %20 KDV eklenir (hesaba dahil edildi). Kargo tutarı satıcı-gönderimli (kendi kargo firmanız) senaryoyu varsayar — resmi kaynağa göre bu serbest bir seçim; Amazon Lojistik (FBA) ve Amazon Kolay Gönderi\'nin farklı ücretlendirmesi kapsam dışıdır.',
-      'Trendyol komisyon oranları RESMİ DEĞİL — 4 bağımsız kaynaktan (en güncel Temmuz 2026) derlenen yaklaşık değerler. Komisyonun KDV dahil mi hariç mi fiyat üzerinden hesaplandığı kaynaklar arasında çelişkili; kesin oranı satıcı panelinizden teyit edip ilgili alana yazabilirsiniz.',
+      'Trendyol komisyon oranları RESMİ DEĞİL — 4 bağımsız kaynaktan (en güncel Temmuz 2026) derlenen yaklaşık değerler; kesin oranı satıcı panelinizden teyit edip ilgili alana yazabilirsiniz. (Komisyonun KDV hariç mi dahil mi tabana uygulandığı sorusu ÇÖZÜLDÜ — bkz. aşağıdaki ayrı not; mevcut hesaplama formülü doğru.)',
       'Trendyol kargo: satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo listesiyle sınırlı (developers.trendyol.com\'a göre 10 sabit firma; serbest taşıyıcı seçimi yok). Soldaki genel kargo tutarı burada varsayılan olarak kullanılıyor ama üç bağımsız kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için birbirinden %35\'e varan farkla ayrıştığı için kesin değil — panelinizdeki gerçek tutarı "Trendyol → Kargo" alanına girebilirsiniz.',
       'Shopify oranları resmi (shopify.com/pricing), USD cinsinden, ' + KH.FX.date + ' kuruyla (1 USD ≈ ' + KH.FX.USD_TRY + ' TL) TL\'ye çevrildi. Kargo firması seçimi tamamen serbest (platform kısıtlaması yok), bu yüzden soldaki genel tablo doğrudan geçerli.',
-      'Etsy: işlem komisyonu (%6,5) ve Türkiye düzenleyici işletim ücreti (%2,27) çoklu kaynaktan teyitli. Ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi — %4 varsayımı tahminidir, değiştirilebilir. Offsite Ads ücreti sadece o satış Etsy\'nin site dışı reklamından geldiyse uygulanır (zorunlu, opt-out yok).',
+      'Etsy: işlem komisyonu (%6,5) çoklu kaynaktan teyitli. Türkiye düzenleyici işletim ücreti için bkz. aşağıdaki ayrı not (kaynak çelişkisi çözüldü). Ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi — %4 varsayımı tahminidir, değiştirilebilir. Offsite Ads ücreti sadece o satış Etsy\'nin site dışı reklamından geldiyse uygulanır (zorunlu, opt-out yok).',
       'Etsy kargo: satışlar genelde yurt dışına gittiği için soldaki yurt içi kargo tablosu Etsy\'ye HİÇ uygulanmıyor — Etsy kendi ayrı kargo alanını kullanır, boş/0 bırakılırsa fiyat olduğundan düşük çıkar. Taşıyıcı seçimi serbest (DHL/UPS/FedEx/PTT Yurtdışı/Navlungo vb.); tek bir güvenilir ortalama uluslararası tarife bulunamadığı için (hedef ülkeye, ağırlığa ve taşıyıcıya göre çok değişken) gerçek teklifinizi girmeniz gerekir.',
       'Kur anlık görüntüsü ' + KH.FX.date + ' tarihli (doviz.com + xe.com çapraz kontrollü). Uzun vadede canlı bir kur API\'sine bağlanmalı.',
       'Reklam gideri kalemi araştırılmadı — kullanıcı tarafından girilir.',
@@ -321,10 +346,17 @@
     });
   }
 
+  // Kullanıcı bir görsel seçip yeniden boyutlandırma bitmeden ikinci bir
+  // görsel seçerse (veya formu kapatıp yeni bir kayıt için yeniden açarsa),
+  // önceki resizeImageFile() sözü GEÇ dönebilir ve daha yeni seçimin üzerine
+  // yazabilir. Nesil sayacı, sadece hâlâ güncel olan sonucun uygulanmasını sağlar.
+  var imageGeneration = 0;
+
   function resetSaveForm() {
     el.saveForm.reset();
     pendingImageDataUrl = null;
     el.saveImageThumb.innerHTML = IMAGE_PLACEHOLDER_SVG;
+    imageGeneration++;
   }
 
   function fillSaveSnapshot() {
@@ -355,10 +387,13 @@
   function handleImageInputChange() {
     var file = el.saveImageInput.files && el.saveImageInput.files[0];
     if (!file) return;
+    var gen = ++imageGeneration;
     resizeImageFile(file, 640, 0.82).then(function (dataUrl) {
+      if (gen !== imageGeneration) return; // daha yeni bir seçim/reset oldu, bu sonuç artık geçersiz
       pendingImageDataUrl = dataUrl;
       el.saveImageThumb.innerHTML = '<img src="' + dataUrl + '" alt="" />';
     }).catch(function () {
+      if (gen !== imageGeneration) return;
       pendingImageDataUrl = null;
       el.saveImageThumb.innerHTML = IMAGE_PLACEHOLDER_SVG;
     });
@@ -407,6 +442,12 @@
   }
 
   function renderSavedList(items) {
+    // Eski kartları atmadan önce gözlemciden çıkar — aksi halde
+    // revealObserver, artık DOM'da olmayan düğümleri sonsuza dek referans
+    // olarak tutmaya devam eder (her panel açılışında büyüyen bir sızıntı).
+    if (revealObserver) {
+      el.savedList.querySelectorAll('[data-reveal]').forEach(function (n) { revealObserver.unobserve(n); });
+    }
     el.savedEmpty.style.display = items.length ? 'none' : '';
     el.savedList.innerHTML = '';
 
@@ -448,8 +489,17 @@
     observeReveals(el.savedList);
   }
 
+  // İki asenkron zincir (ör. art arda iki hızlı silme, ya da silme + panel
+  // yeniden açma) çakışırsa, yavaş kalan getAll() sonucu geriye dönüp daha
+  // yeni bir renderSavedList() çağrısının üzerine yazabilir — silinen bir
+  // kart geçici olarak yeniden görünür olur. Nesil sayacı bunu önler: sadece
+  // hâlâ en güncel zincire ait sonuç render edilir.
+  var savedListGeneration = 0;
+
   function openSavedPanel() {
+    var gen = ++savedListGeneration;
     KHStore.getAll().then(function (items) {
+      if (gen !== savedListGeneration) return;
       renderSavedList(items);
       el.savedPanel.showModal();
     }).catch(function (err) {
@@ -463,10 +513,11 @@
     if (!btn) return;
     var id = parseInt(btn.getAttribute('data-id'), 10);
     btn.disabled = true;
+    var gen = ++savedListGeneration;
     KHStore.deleteItem(id).then(function () {
       return KHStore.getAll();
     }).then(function (items) {
-      renderSavedList(items);
+      if (gen === savedListGeneration) renderSavedList(items);
       return refreshSavedCount();
     }).catch(function (err) {
       console.error('Silme başarısız:', err);
@@ -494,6 +545,7 @@
     el.liveBar.addEventListener('click', function () {
       el.results.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+    updateStickyOffset();
     window.addEventListener('resize', updateStickyOffset);
     window.addEventListener('scroll', onScroll, { passive: true });
 

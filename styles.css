@@ -178,6 +178,13 @@ body.is-scrolled .topbar .brand {
 }
 
 .icon-btn .badge {
+  /* Bu rozet "kayıtlı ürün sayısı" gösteriyor — Trendyol'la hiçbir ilgisi
+     yok; önceden yanlışlıkla --accent-trendyol kullanıyordu. İlk düzeltme
+     denemesi (ink zemin/paper yazı) rozeti görünmez yaptı — rozet
+     .sticky-head'in KOYU (ink) zemini ÜZERİNDE oturuyor, .icon-btn'in
+     kendisi de aynı yüzeyde zaten "paper" renginde (bkz. yukarısı); bu
+     yüzden rozet de ink DEĞİL paper zeminli olmalı (ink metinle) —
+     karanlık üstünde karanlık değil, ikon çubuğuyla aynı ters kontrast. */
   position: absolute;
   top: -6px;
   right: -6px;
@@ -185,8 +192,8 @@ body.is-scrolled .topbar .brand {
   height: 17px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--accent-trendyol);
-  color: #fff;
+  background: var(--paper);
+  color: var(--ink);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 17px;
@@ -340,6 +347,23 @@ body.is-scrolled .topbar .brand {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* appearance:none yukarıda zaten var ama Chromium/Safari'de sayı
+   alanlarındaki yukarı/aşağı ok düğmelerini (spin button) gizlemek için
+   ayrıca bu sözde-öğeleri hedeflemek gerekiyor; Firefox için de ayrı bir
+   -moz-appearance bildirimi lazım. */
+.field input[type="number"],
+.dims-grid input {
+  -moz-appearance: textfield;
+}
+
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button,
+.dims-grid input::-webkit-outer-spin-button,
+.dims-grid input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .field select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237A7666' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -401,6 +425,8 @@ details.dims summary {
 }
 
 .dims-grid input {
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   padding: 9px var(--space-2);
   border: 1.5px solid var(--line-strong);
@@ -496,11 +522,15 @@ details.advanced[open] summary {
 }
 
 .platform-group h4 {
+  /* Metin --accent yerine --ink kullanıyor: 3 platform renginden ikisi
+     (shopify 2.82:1, trendyol 3.20:1) küçük kalın metin için WCAG AA
+     eşiğinin (4.5:1) altında kalıyordu. Kimlik zaten soldaki renkli
+     çizgiyle taşınıyor — metnin de aynı işi tekrar etmesi gerekmiyor. */
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--accent);
+  color: var(--ink);
   margin-bottom: var(--space-3);
 }
 
@@ -586,11 +616,13 @@ details.advanced[open] summary {
 .live-dot.etsy     { background: var(--accent-etsy); }
 
 .result-card h3 {
+  /* Aynı kontrast gerekçesi: kimlik üstteki 3px renkli çizgiyle zaten
+     taşınıyor, başlık metni --ink kullanıyor (bkz. .platform-group h4). */
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--accent);
+  color: var(--ink);
   margin-bottom: var(--space-2);
 }
 
@@ -632,6 +664,20 @@ details.advanced[open] summary {
 }
 
 .result-card .error:empty {
+  display: none;
+}
+
+/* Kademeli komisyonun sınır bandında kaldığı (tierAmbiguous) durumlar için
+   uyarı — hesap yine de yapıldı ama kullanıcının panelinden teyit etmesi
+   öneriliyor, bu yüzden .error ile aynı renk ama daha küçük/sakin. */
+.result-card .warn {
+  font-size: 0.78rem;
+  color: var(--error);
+  font-weight: 600;
+  margin-top: var(--space-1);
+}
+
+.result-card .warn:empty {
   display: none;
 }
 
@@ -981,6 +1027,15 @@ summary:focus-visible {
 }
 
 @media (min-width: 1300px) {
+  /* .results burada 4 sütuna geçiyor ama .page 900px eşiğinden beri
+     1180px'te sabitti — konteyner büyümeden sütun sayısı artınca her kart
+     ~157px'e sıkışıyordu (1180px tavanla hiçbir geniş ekran gerçekte daha
+     fazla yer vermiyordu). Aynı eşikte .page'i de büyüterek bu boşluğu
+     kapatıyoruz; 1440px'te sabitleniyor (kart başına ~222px). */
+  .page {
+    max-width: 1440px;
+  }
+
   .results {
     grid-template-columns: repeat(4, 1fr);
   }

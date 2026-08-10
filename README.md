@@ -109,6 +109,68 @@ bağımsız bir audit'in ardından (bkz. `research/ek-gider-kalemleri-2026.md`)
   maliyet" formülüyle Amazon/Trendyol/Shopify'a ekleniyor (Etsy hariç); ikisi
   de varsayılan 0, güvenilir bir "tipik" oran bulunamadığı için kullanıcı girer.
 
+## Bug / görsel / optimizasyon audit'i (10 Ağustos 2026, 3. tur)
+
+Kod tabanının tamamı bağımsız 3 gözden geçirmeyle (bug, görsel, optimizasyon)
+tarandı; bulgular doğrulanıp şu değişiklikler yapıldı:
+
+- **Kritik bug — Amazon'da dilimli komisyon bazı durumlarda kendiyle tutarsız
+  bir fiyat/oran döndürüyordu:** Fiyat arttıkça oranın DÜŞTÜĞÜ dilim
+  yapılarında (Takı/Mücevher: ≤900₺ için %20, >900₺ için %6) eski kod tek bir
+  düzeltme adımıyla sınırlıydı ve bazı maliyet/kâr kombinasyonlarında yanlış
+  dilimde kalabiliyordu (doğrulanan örnek: maliyet=650₺, hedef kâr=%10 →
+  eski kod ₺785,02 + %6 komisyon döndürüyordu, ama 785,02₺ ≤ 900₺ olduğu için
+  gerçekte %20 uygulanır — satıcı zarar ederdi). Bazı kombinasyonlarda ise
+  kendiyle tutarlı HİÇBİR fiyat yok (döngü iki aday arasında sonsuza dek
+  salınıyor). Düzeltme: yakınsama artık döngü tespitiyle çalışıyor
+  (`solveTieredAmazon`), gerçek bir salınım durumunda satıcıyı daha güvende
+  bırakan (daha yüksek fiyat/oran gerektiren) aday seçiliyor ve sonuç
+  `tierAmbiguous` olarak işaretlenip ilgili sonuç kartında görünür bir uyarı
+  gösteriliyor ("Amazon panelinizden gerçek oranı teyit edin").
+- **Negatif girdi savunması:** HTML'deki `min="0"` özniteliği JS tarafında
+  hiçbir şeyi engellemiyor — kullanıcı elle "-50" yazıp tablayabiliyordu, bu
+  da bazı alanlarda (özellikle iade oranı/maliyeti gibi türetilmiş ara
+  değerlerde) fiyatı sessizce düşürüyordu. Artık hem `app.js`'te (okuma
+  anında) hem `calc.js`'te (`computeAll()`'a giren tüm sayısal alanlar için
+  tek noktadan) 0'a kırpılıyor.
+- **Aşırı yüksek kâr hedefi:** Oranlar toplamı %100'e çok yaklaştığında (ör.
+  %99,9) payda sıfıra yaklaşıp anlamsız/astronomik bir "fiyat" üretiyordu
+  (doğrulanan örnek: %99,99 toplamda ₺150 sabit maliyet ~₺1,5 milyon "fiyat"
+  üretiyordu). Eşik %100'den %95'e çekildi; üzerinde açık bir hata mesajı
+  gösteriliyor.
+- **Görsel:** Sayı alanlarındaki tarayıcı ok/spinner düğmeleri artık
+  Chromium/Safari VE Firefox'ta tutarlı şekilde gizli. Kayıtlı ürün sayacı
+  rozeti yanlışlıkla Trendyol turuncusu kullanıyordu (rozetin platformla
+  hiçbir ilgisi yok) — nötr mürekkep/kağıt temasına çekildi. Sonuç
+  kartlarındaki platform başlıkları (`AMAZON.COM.TR` vb.) WCAG AA kontrast
+  eşiğinin altındaydı (shopify 2.82:1, trendyol 3.20:1 — gereken 4.5:1); kimlik
+  zaten kartın üstündeki renkli çizgiyle taşındığı için başlık metni düz
+  mürekkep rengine çekildi. Geniş ekranlarda (≥1300px) sonuç kartları 4
+  sütuna geçiyordu ama konteyner 900px eşiğinden beri 1180px'te sabitti — her
+  kart ~157px'e sıkışıyordu; aynı eşikte konteyner de 1440px'e kadar
+  büyüyecek şekilde düzeltildi (kart başına ~222px).
+- **Optimizasyon/sağlamlık:** `Intl.NumberFormat`/`Intl.DateTimeFormat`
+  nesneleri artık her render'da değil modül yüklenirken bir kez oluşturuluyor.
+  Sabit şerit yüksekliği her tuş vuruşunda değil sadece gerçekten
+  değişebileceği anlarda (yeniden boyutlandırma/kaydırma) yeniden
+  hesaplanıyor. Görsel yükleme ve kayıtlı ürün silme akışlarında birer
+  yarış durumu vardı (hızlı art arda iki işlemde, yavaş kalan asenkron
+  sonuç daha yeni olanın üzerine yazabiliyordu) — nesil sayaçlarıyla
+  düzeltildi. Kayıtlı ürünler paneli her yeniden çizildiğinde eski kartlar
+  `IntersectionObserver`'dan çıkarılmadan DOM'dan siliniyordu (büyüyen bir
+  sızıntı) — düzeltildi. `storage.js` her işlemde IndexedDB bağlantısını
+  yeniden açıyordu — artık bağlantı modül kapsamında önbelleğe alınıyor.
+  `sw.js`, başarısız (4xx/5xx) ağ yanıtlarını da önbelleğe yazabiliyordu
+  (cevrimdışı kullanıcıya bozuk bir yanıt sunma riski) — artık sadece 2xx
+  yanıtlar önbelleğe alınıyor; önbellek sürümü v5 → v6.
+
+Denetimde tespit edilip **kasıtlı olarak değiştirilmeyen** noktalar da var —
+ör. dosyaların minify edilmemesi (statik/framework'süz bir site için okunabilirlik
+tercih edildi), görsel yeniden boyutlandırma tavanının (640px) yükseltilmemesi.
+Bu değişiklikler `node test.js` ve `scripts/verify_ui.py` ile doğrulandı (yeni
+`tierAmbiguous` uyarısı, rozet rengi ve geniş-ekran konteyner genişliği için
+yeni otomatik kontroller eklendi).
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı

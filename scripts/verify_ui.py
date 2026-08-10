@@ -268,6 +268,8 @@ def main():
         count_after = page.eval_on_selector("#savedCount", "el => el.textContent")
         check("Kaydedince rozet sayaci artiyor", count_before != count_after and count_after == "1",
               f"{count_before} -> {count_after}")
+        badge_bg = page.eval_on_selector("#savedCount", "el => getComputedStyle(el).backgroundColor")
+        check("Rozet rengi Trendyol turuncusu DEGIL (notr ink/paper temasi)", badge_bg != "rgb(235, 104, 52)", badge_bg)
 
         db_count = page.evaluate("() => KHStore.count()")
         check("IndexedDB'de gercekten 1 kayit var", db_count == 1, db_count)
@@ -330,6 +332,32 @@ def main():
 
         page.screenshot(path="verify_screenshot.png", full_page=True)
 
+        # ============== TIERAMBIGUOUS UYARISI (kademeli komisyon salinim bandi) ==============
+        # Taşıyıcı hep "auto", desi'yi de sabitliyoruz (=3 -> PTT en ucuz, kargoTRY=106)
+        # ki bant hesaplaması önceki adımlardan kalan desi değerine bağlı kalmasın.
+        # cost=560/margin=10/taki, bu sabit kargoTRY ile salınım bandına düşecek şekilde
+        # calc.js üzerinden ayrıca doğrulandı (bkz. commit mesajı) — ham 650/10 (kargoTRY=0
+        # varsayan test.js'teki saf birim testinden farklı olarak) burada kargo dahil.
+        desi_input2 = page.query_selector("#desi")
+        desi_input2.click(click_count=3)
+        desi_input2.type("3")
+        page.select_option("#sector", "taki")
+        cost_input2 = page.query_selector("#cost")
+        cost_input2.click(click_count=3)
+        cost_input2.type("560")
+        margin_input2 = page.query_selector("#margin")
+        margin_input2.click(click_count=3)
+        margin_input2.type("10")
+        page.wait_for_timeout(250)
+        amazon_warn = page.eval_on_selector(".result-card.amazon .warn", "el => el.textContent")
+        check("Kademe salinim bandinda Amazon karti uyari gosteriyor (tierAmbiguous)", len(amazon_warn.strip()) > 0, amazon_warn)
+
+        cost_input2.click(click_count=3)
+        cost_input2.type("100")
+        page.wait_for_timeout(250)
+        amazon_warn_normal = page.eval_on_selector(".result-card.amazon .warn", "el => el.textContent")
+        check("Normal durumda Amazon karti uyari GOSTERMIYOR", amazon_warn_normal.strip() == "", amazon_warn_normal)
+
         # Genis ekran: form|sonuc iki sutun + sonuc paneli sticky mi?
         wide = browser.new_page(viewport={"width": 1400, "height": 900})
         wide.goto(f"{BASE}/index.html", wait_until="networkidle")
@@ -339,6 +367,8 @@ def main():
         check("Sonuc paneli sticky", results_position == "sticky", results_position)
         col_count = wide.eval_on_selector("#results", "el => getComputedStyle(el).gridTemplateColumns.split(' ').length")
         check("1400px genislikte 4 sonuc karti yan yana", col_count == 4, col_count)
+        page_width = wide.eval_on_selector(".page", "el => el.getBoundingClientRect().width")
+        check("1400px genislikte .page 1180px sabitinden genisledi (4 sutuna yer acmak icin)", page_width > 1180, page_width)
         wide.screenshot(path="verify_screenshot_wide.png", full_page=True)
         wide.close()
 

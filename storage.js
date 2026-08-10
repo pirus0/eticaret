@@ -20,8 +20,16 @@
   var DB_VERSION = 1;
   var STORE = 'saved';
 
+  // Bağlantı (açılış sözü) modül kapsamında önbelleğe alınıyor — önceden her
+  // addItem/getAll/deleteItem/count çağrısı yeni bir indexedDB.open() tetikliyordu,
+  // bu gereksiz yere yavaş ve (kısa süre için) birden fazla açık bağlantı
+  // anlamına geliyordu. Açılış devam ederken gelen eşzamanlı çağrılar da aynı
+  // sözü paylaşır (tekrar open() tetiklemez).
+  var dbPromise = null;
+
   function openDB() {
-    return new Promise(function (resolve, reject) {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
       if (!('indexedDB' in (root || {}))) {
         reject(new Error('Bu tarayıcı IndexedDB desteklemiyor, kayıt özelliği kullanılamaz.'));
         return;
@@ -34,9 +42,23 @@
           store.createIndex('createdAt', 'createdAt');
         }
       };
-      req.onsuccess = function () { resolve(req.result); };
-      req.onerror = function () { reject(req.error); };
+      req.onsuccess = function () {
+        var db = req.result;
+        // Başka bir sekme DB sürümünü değiştirirse bu bağlantı geçersiz
+        // kalır — kapatıp önbelleği temizliyoruz ki bir sonraki çağrı
+        // temiz bir bağlantı açsın.
+        db.onversionchange = function () {
+          db.close();
+          dbPromise = null;
+        };
+        resolve(db);
+      };
+      req.onerror = function () {
+        dbPromise = null; // başarısız açılışı önbelleğe alma, sonraki çağrı yeniden denesin
+        reject(req.error);
+      };
     });
+    return dbPromise;
   }
 
   function withStore(mode, fn) {

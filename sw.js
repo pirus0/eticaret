@@ -2,7 +2,10 @@
 
 // Surum numarasini her rate/kur guncellemesinde artirin — bu, eski istemcilerin
 // onbellegini temizleyip yeni verileri cekmesini saglar.
-var CACHE_NAME = 'kar-hesap-v5';
+// v6: bug/gorsel/optimizasyon turu (kademeli komisyon duzeltmesi, negatif
+// deger sanitizasyonu, CSS/erisilebilirlik duzeltmeleri) - eski onbellek
+// bu duzeltmeleri icermeyen calc.js/app.js/styles.css sunmaya devam ederdi.
+var CACHE_NAME = 'kar-hesap-v6';
 
 var APP_SHELL = [
   './',
@@ -51,10 +54,16 @@ self.addEventListener('fetch', function (event) {
   event.respondWith(
     fetch(event.request)
       .then(function (response) {
-        var copy = response.clone();
-        caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(event.request, copy);
-        });
+        // Sadece basarili (2xx) yanitlari onbellekle — aksi halde gecici bir
+        // 404/500 onbellege yazilip cevrimdisi kullanicilara o bozuk yanit
+        // sunulmaya devam ederdi. cache.put() reddi de (ör. kota dolu)
+        // asil yaniti etkilemesin diye ayrica yakalaniyor.
+        if (response.ok) {
+          var copy = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            return cache.put(event.request, copy);
+          }).catch(function () { /* onbellek yazilamadi, asil yanit yine de donuyor */ });
+        }
         return response;
       })
       .catch(function () {
