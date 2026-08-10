@@ -6,6 +6,15 @@
   --brand-dark: #372AA8;
   --brand-light: #EEF2FF;
   --bg: #F5F5F8;
+
+  /* Platform vurgu renkleri — kategorik, çift çift ayırt edilebilirlik için
+     doğrulanmış set (OKLab ΔE + protan/deutan simülasyonu ile kontrol edildi).
+     Gerçek marka renkleri kasıtlı kullanılmadı: Amazon/Trendyol/Etsy üçü de
+     turuncu ailesinde olduğu için yan yana ayırt edilemiyordu. */
+  --accent-amazon: #2a78d6;
+  --accent-trendyol: #eb6834;
+  --accent-shopify: #1baf7a;
+  --accent-etsy: #4a3aa7;
   --card-bg: #FFFFFF;
   --text: #1A1A2E;
   --text-muted: #6B7280;
@@ -56,14 +65,17 @@ a {
 
 /* --- Üst bar --- */
 
-.topbar {
+.sticky-head {
   position: sticky;
   top: 0;
   z-index: 10;
+  box-shadow: var(--shadow);
+}
+
+.topbar {
   background: var(--brand);
   color: #fff;
   padding: env(safe-area-inset-top, 0) var(--space-4) 0 var(--space-4);
-  box-shadow: var(--shadow);
 }
 
 .topbar .brand {
@@ -74,12 +86,54 @@ a {
   letter-spacing: -0.01em;
 }
 
+/* Kaydırma sırasında da görünür kalan, canlı güncellenen "en ucuz fiyat" şeridi.
+   Amaç: formun altındaki sonuçlara her değişiklikte kaydırmadan bakabilmek. */
+.live-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--brand-dark);
+  color: #fff;
+  padding: 10px var(--space-4);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-bar:empty {
+  display: none;
+}
+
+.live-bar strong {
+  font-weight: 800;
+}
+
+.live-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 /* --- Sayfa iskeleti --- */
 
 .page {
   max-width: 720px;
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.layout-results {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -261,11 +315,32 @@ details.advanced[open] summary {
   margin-bottom: var(--space-4);
 }
 
-details.advanced .field {
-  padding: var(--space-3);
-  background: var(--bg);
-  border-radius: var(--radius-sm);
+/* Platform bazlı gruplama: her alt küme kendi platformunun rengiyle işaretli,
+   böylece hangi alanın hangi platforma ait olduğu etiket metnini okumadan
+   da anlaşılıyor. Renkler .result-card ile aynı --accent-* değişkenlerini kullanıyor. */
+.platform-group {
+  border-left: 3px solid var(--accent);
+  padding-left: var(--space-3);
+  margin-bottom: var(--space-5);
 }
+
+.platform-group:last-child {
+  margin-bottom: 0;
+}
+
+.platform-group h4 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin-bottom: var(--space-3);
+}
+
+.platform-group.amazon   { --accent: var(--accent-amazon); }
+.platform-group.trendyol { --accent: var(--accent-trendyol); }
+.platform-group.shopify  { --accent: var(--accent-shopify); }
+.platform-group.etsy     { --accent: var(--accent-etsy); }
 
 /* --- Özet banner --- */
 
@@ -297,6 +372,9 @@ details.advanced .field {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-3);
+  /* Sabit ust seride (topbar + live-bar) gomulup kalmasin diye, oraya
+     kaydirildiginda (live-bar tiklamasi) altina birakacak kadar pay birak. */
+  scroll-margin-top: calc(var(--sticky-head-h, 64px) + var(--space-3));
 }
 
 @media (min-width: 560px) {
@@ -313,6 +391,16 @@ details.advanced .field {
   padding: var(--space-4);
   border-top: 4px solid var(--accent);
 }
+
+.result-card.amazon   { --accent: var(--accent-amazon); }
+.result-card.trendyol { --accent: var(--accent-trendyol); }
+.result-card.shopify  { --accent: var(--accent-shopify); }
+.result-card.etsy     { --accent: var(--accent-etsy); }
+
+.live-dot.amazon   { background: var(--accent-amazon); }
+.live-dot.trendyol { background: var(--accent-trendyol); }
+.live-dot.shopify  { background: var(--accent-shopify); }
+.live-dot.etsy     { background: var(--accent-etsy); }
 
 .result-card h3 {
   font-size: 0.9rem;
@@ -416,9 +504,25 @@ summary:focus-visible {
 
 @media (min-width: 900px) {
   .page {
-    max-width: 960px;
+    max-width: 1180px;
   }
 
+  /* Form solda, sonuçlar sağda — ikisi de aynı anda görünür, form uzun olsa
+     bile sonuç sütunu kaydırma sırasında sabit kalır (aşağıdaki sticky). */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(360px, 460px) 1fr;
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  .layout-results {
+    position: sticky;
+    top: calc(var(--sticky-head-h, 64px) + var(--space-4));
+  }
+}
+
+@media (min-width: 1300px) {
   .results {
     grid-template-columns: repeat(4, 1fr);
   }

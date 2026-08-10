@@ -2,7 +2,7 @@
 
 // Surum numarasini her rate/kur guncellemesinde artirin — bu, eski istemcilerin
 // onbellegini temizleyip yeni verileri cekmesini saglar.
-var CACHE_NAME = 'kar-hesap-v1';
+var CACHE_NAME = 'kar-hesap-v2';
 
 var APP_SHELL = [
   './',

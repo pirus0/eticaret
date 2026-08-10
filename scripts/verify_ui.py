@@ -58,7 +58,25 @@ def main():
         summary_text = page.eval_on_selector("#summary", "el => el.textContent")
         check("Ozet banner dolu", len(summary_text.strip()) > 0, summary_text[:80])
 
-        # --- Canli guncelleme testi: maliyeti degistir, fiyatin degistigini dogrula ---
+        # --- Sabit (sticky) canli-fiyat seridi dolu mu? ---
+        live_bar_text = page.eval_on_selector("#liveBar", "el => el.textContent")
+        check("Live-bar dolu", len(live_bar_text.strip()) > 0, live_bar_text[:80])
+
+        # --- 4 kart birbirinden ayirt edilebilir renklerde mi (renk kodlama duzeltmesi)? ---
+        card_classes = page.eval_on_selector_all(".result-card", "els => els.map(e => e.className)")
+        expected_keys = ["amazon", "trendyol", "shopify", "etsy"]
+        check("Her kart kendi platform sinifini tasiyor",
+              all(k in " ".join(card_classes) for k in expected_keys), str(card_classes))
+        border_colors = page.eval_on_selector_all(
+            ".result-card", "els => els.map(e => getComputedStyle(e).borderTopColor)")
+        check("4 kartin ust kenarligi 4 farkli renk (once 3'u ayni turuncuydu)",
+              len(set(border_colors)) == 4, str(border_colors))
+
+        # --- Gelismis ayarlar paneli platforma gore gruplanmis mi? ---
+        group_classes = page.eval_on_selector_all(".platform-group", "els => els.map(e => e.className)")
+        check("4 platform grubu var", len(group_classes) == 4, str(group_classes))
+
+        # --- Canli guncelleme testi: maliyeti degistir, fiyatin VE live-bar'in degistigini dogrula ---
         old_price = page.eval_on_selector(".result-card .price", "e => e.textContent")
         cost_input = page.query_selector("#cost")
         cost_input.click(click_count=3)
@@ -67,6 +85,30 @@ def main():
         page.wait_for_timeout(200)
         new_price = page.eval_on_selector(".result-card .price", "e => e.textContent")
         check("Maliyet degisince fiyat canli guncelleniyor", old_price != new_price, f"{old_price} -> {new_price}")
+        new_live_bar_text = page.eval_on_selector("#liveBar", "el => el.textContent")
+        check("Maliyet degisince live-bar da guncelleniyor", live_bar_text != new_live_bar_text,
+              f"{live_bar_text} -> {new_live_bar_text}")
+
+        # --- live-bar tiklaninca sonuclara kayiyor mu (sabit seridin altina, ustune degil) ---
+        # Not: page.click() burada kasitli kullanilmadi — Playwright'in sticky/fixed
+        # elemanlar icin devreye soktugu otomatik on-kaydirma sezgiseli, bizim
+        # smooth scrollIntoView'imizla yarisa girip flaky sonuc veriyor (gercek bir
+        # tarayicida parmakla/mouse'la tiklamak bu sorunu yasamiyor). Gercek DOM
+        # click() API'sini native'e en yakin sekilde tetiklemek icin evaluate kullanildi.
+        page.evaluate("document.getElementById('liveBar').click()")
+        page.wait_for_timeout(1000)
+        results_rect = page.eval_on_selector("#results", """el => {
+            const r = el.getBoundingClientRect();
+            return { top: r.top, bottom: r.bottom };
+        }""")
+        sticky_h = page.eval_on_selector("#results", "el => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sticky-head-h')) || 0")
+        results_in_view = 0 <= results_rect["top"] < 900 and results_rect["top"] >= sticky_h - 5
+        check("Live-bar'a tiklayinca sonuclara kayiyor (sabit seridin altinda)",
+              results_in_view, f"top={results_rect['top']:.0f} sticky_h={sticky_h:.0f}")
+
+        # --- --sticky-head-h CSS degiskeni JS tarafindan set edildi mi? ---
+        sticky_var = page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--sticky-head-h')")
+        check("--sticky-head-h degiskeni set edildi", sticky_var.strip().endswith("px"), sticky_var)
 
         # --- Kargo notu dolduruluyor mu (auto carrier) ---
         carrier_note = page.eval_on_selector("#carrierNote", "el => el.textContent")
@@ -123,6 +165,19 @@ def main():
         check("Service worker kaydoldu", sw_state == "ready", sw_state)
 
         page.screenshot(path="verify_screenshot.png", full_page=True)
+
+        # --- Genis ekran: form|sonuc iki sutun + sonuc paneli sticky mi? ---
+        wide = browser.new_page(viewport={"width": 1400, "height": 900})
+        wide.goto(f"{BASE}/index.html", wait_until="networkidle")
+        layout_display = wide.eval_on_selector(".layout", "el => getComputedStyle(el).display")
+        check("1400px genislikte .layout grid'e geciyor", layout_display == "grid", layout_display)
+        results_position = wide.eval_on_selector(".layout-results", "el => getComputedStyle(el).position")
+        check("Sonuc paneli sticky", results_position == "sticky", results_position)
+        col_count = wide.eval_on_selector(
+            "#results", "el => getComputedStyle(el).gridTemplateColumns.split(' ').length")
+        check("1400px genislikte 4 sonuc karti yan yana", col_count == 4, col_count)
+        wide.screenshot(path="verify_screenshot_wide.png", full_page=True)
+        wide.close()
 
         browser.close()
 

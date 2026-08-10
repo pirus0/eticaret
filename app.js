@@ -1,11 +1,14 @@
 (function () {
   'use strict';
 
+  // Renkler artik styles.css'teki --accent-* degiskenlerinden geliyor (tek
+  // kaynak orada) — burada sadece platform anahtari -> etiket eslemesi var.
+  // Kart/grup rengi CSS'te .amazon/.trendyol/.shopify/.etsy sinif adiyla uygulaniyor.
   var PLATFORM_META = {
-    amazon: { label: 'Amazon.com.tr', color: '#FF9900' },
-    trendyol: { label: 'Trendyol', color: '#F27A1A' },
-    shopify: { label: 'Shopify', color: '#95BF47' },
-    etsy: { label: 'Etsy', color: '#F1641E' }
+    amazon: { label: 'Amazon.com.tr' },
+    trendyol: { label: 'Trendyol' },
+    shopify: { label: 'Shopify' },
+    etsy: { label: 'Etsy' }
   };
   var PLATFORM_ORDER = ['amazon', 'trendyol', 'shopify', 'etsy'];
 
@@ -13,7 +16,7 @@
   ['cost', 'sector', 'margin', 'carrier', 'desi', 'dimW', 'dimD', 'dimH', 'dimApply',
     'carrierNote', 'ads', 'amazonOverride', 'trendyolOverride', 'shopifyPlan', 'shopifyUnits',
     'etsyPayment', 'etsyOffsite', 'etsyOverThreshold', 'etsyThresholdWrap',
-    'summary', 'results', 'notesList'].forEach(function (id) {
+    'summary', 'results', 'notesList', 'liveBar'].forEach(function (id) {
     el[id] = document.getElementById(id);
   });
 
@@ -87,8 +90,7 @@
       var r = results[key];
       var meta = PLATFORM_META[key];
       var card = document.createElement('article');
-      card.className = 'result-card';
-      card.style.setProperty('--accent', meta.color);
+      card.className = 'result-card ' + key;
 
       var html = '<h3>' + meta.label + '</h3>';
 
@@ -128,10 +130,38 @@
     }
   }
 
+  // Formun altında kalan sonuçlara her seferinde kaydırmadan da "en ucuz kaç
+  // paraya satmam lazım" sorusuna anında cevap versin diye üstte sabit duran
+  // şerit. Aynı hesaplamayı tekrar kullanıyor, ayrı bir mantık değil.
+  function updateLiveBar(results) {
+    var valid = PLATFORM_ORDER
+      .map(function (key) { return { key: key, r: results[key] }; })
+      .filter(function (x) { return x.r && !x.r.unavailable && !x.r.error; });
+
+    if (!valid.length) {
+      el.liveBar.innerHTML = '<span class="live-dot"></span><span>Hiçbir platform için fiyat hesaplanamadı — girdileri kontrol edin.</span>';
+      return;
+    }
+    valid.sort(function (a, b) { return a.r.price - b.r.price; });
+    var best = valid[0];
+    el.liveBar.innerHTML =
+      '<span class="live-dot ' + best.key + '"></span>' +
+      '<span>En ucuz: <strong>' + PLATFORM_META[best.key].label + '</strong> — ' + fmtTRY(best.r.price) + '</span>';
+  }
+
+  // .layout-results'ın sticky "top" değeri, üstteki sabit şeridin (topbar +
+  // live-bar) gerçek yüksekliğine göre ayarlanıyor — sabit piksel yazmak yerine.
+  function updateStickyOffset() {
+    var head = document.querySelector('.sticky-head');
+    if (head) document.documentElement.style.setProperty('--sticky-head-h', head.offsetHeight + 'px');
+  }
+
   function recalc() {
     var input = readInput();
     var results = KH.computeAll(input);
     renderResults(results);
+    updateLiveBar(results);
+    updateStickyOffset();
   }
 
   function applyDims() {
@@ -170,6 +200,11 @@
       inp.addEventListener('input', recalc);
       inp.addEventListener('change', recalc);
     });
+
+    el.liveBar.addEventListener('click', function () {
+      el.results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    window.addEventListener('resize', updateStickyOffset);
 
     recalc();
 

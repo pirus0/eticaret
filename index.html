@@ -16,11 +16,15 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<header class="topbar">
-  <span class="brand">Kâr Marjı Hesaplayıcı</span>
-</header>
+<div class="sticky-head">
+  <header class="topbar">
+    <span class="brand">Kâr Marjı Hesaplayıcı</span>
+  </header>
+  <div class="live-bar" id="liveBar" role="status" aria-live="polite"></div>
+</div>
 
 <main class="page">
+<div class="layout">
 
   <section class="card form-card">
     <h2>Ürün</h2>
@@ -70,47 +74,62 @@
     <details class="advanced">
       <summary>Platforma özel ayarlar (isteğe bağlı)</summary>
 
-      <div class="field">
-        <label for="amazonOverride">Amazon komisyonu elle gir (%) — boş bırakılırsa sektör varsayılanı kullanılır</label>
-        <input type="number" id="amazonOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
+      <div class="platform-group amazon">
+        <h4>Amazon</h4>
+        <div class="field">
+          <label for="amazonOverride">Komisyon elle gir (%) — boş bırakılırsa sektör varsayılanı kullanılır</label>
+          <input type="number" id="amazonOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
+        </div>
       </div>
 
-      <div class="field">
-        <label for="trendyolOverride">Trendyol komisyonu elle gir (%) — tahmini oran yerine kendi panelindeki gerçek oranı gir</label>
-        <input type="number" id="trendyolOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik (yaklaşık)" />
+      <div class="platform-group trendyol">
+        <h4>Trendyol</h4>
+        <div class="field">
+          <label for="trendyolOverride">Komisyon elle gir (%) — tahmini oran yerine kendi panelindeki gerçek oranı gir</label>
+          <input type="number" id="trendyolOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik (yaklaşık)" />
+        </div>
       </div>
 
-      <div class="field">
-        <label for="shopifyPlan">Shopify planı</label>
-        <select id="shopifyPlan"></select>
-      </div>
-      <div class="field">
-        <label for="shopifyUnits">Shopify aylık tahmini satış adedi (opsiyonel — abonelik ücretini birime böler)</label>
-        <input type="number" id="shopifyUnits" inputmode="numeric" min="0" step="1" placeholder="boş = abonelik hesaba katılmaz" />
+      <div class="platform-group shopify">
+        <h4>Shopify</h4>
+        <div class="field">
+          <label for="shopifyPlan">Plan</label>
+          <select id="shopifyPlan"></select>
+        </div>
+        <div class="field">
+          <label for="shopifyUnits">Aylık tahmini satış adedi (opsiyonel — abonelik ücretini birime böler)</label>
+          <input type="number" id="shopifyUnits" inputmode="numeric" min="0" step="1" placeholder="boş = abonelik hesaba katılmaz" />
+        </div>
       </div>
 
-      <div class="field">
-        <label for="etsyPayment">Etsy ödeme işleme oranı (%) — Türkiye için doğrulanamadı, tahmini değer</label>
-        <input type="number" id="etsyPayment" inputmode="decimal" min="0" max="20" step="0.1" value="4" />
-      </div>
-      <div class="field checkbox-field">
-        <label><input type="checkbox" id="etsyOffsite" /> Bu satış Etsy Offsite Ads'ten geldi (zorunlu ek ücret)</label>
-      </div>
-      <div class="field checkbox-field" id="etsyThresholdWrap">
-        <label><input type="checkbox" id="etsyOverThreshold" /> Yıllık Etsy satışım $10.000 üzerinde (üzerindeyse %12, altındaysa %15)</label>
+      <div class="platform-group etsy">
+        <h4>Etsy</h4>
+        <div class="field">
+          <label for="etsyPayment">Ödeme işleme oranı (%) — Türkiye için doğrulanamadı, tahmini değer</label>
+          <input type="number" id="etsyPayment" inputmode="decimal" min="0" max="20" step="0.1" value="4" />
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="etsyOffsite" /> Bu satış Etsy Offsite Ads'ten geldi (zorunlu ek ücret)</label>
+        </div>
+        <div class="field checkbox-field" id="etsyThresholdWrap">
+          <label><input type="checkbox" id="etsyOverThreshold" /> Yıllık Etsy satışım $10.000 üzerinde (üzerindeyse %12, altındaysa %15)</label>
+        </div>
       </div>
     </details>
   </section>
 
-  <section class="summary" id="summary"></section>
+  <div class="layout-results">
+    <section class="summary" id="summary"></section>
 
-  <section class="results" id="results"></section>
+    <section class="results" id="results"></section>
 
-  <details class="notes">
-    <summary>Kaynaklar &amp; güven notları</summary>
-    <ul id="notesList"></ul>
-  </details>
+    <details class="notes">
+      <summary>Kaynaklar &amp; güven notları</summary>
+      <ul id="notesList"></ul>
+    </details>
+  </div>
 
+</div>
 </main>
 
 <script src="calc.js"></script>
