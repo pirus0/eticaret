@@ -3,24 +3,31 @@
 
   // Renkler artik styles.css'teki --accent-* degiskenlerinden geliyor (tek
   // kaynak orada) — burada sadece platform anahtari -> etiket eslemesi var.
-  // Kart/grup rengi CSS'te .amazon/.trendyol/.shopify/.etsy sinif adiyla uygulaniyor.
+  // Kart/grup rengi CSS'te .amazon/.trendyol/.n11/.shopify/.shopier/.etsy
+  // sinif adiyla uygulaniyor.
   var PLATFORM_META = {
     amazon: { label: 'Amazon.com.tr' },
     trendyol: { label: 'Trendyol' },
+    n11: { label: 'n11' },
     shopify: { label: 'Shopify' },
+    shopier: { label: 'Shopier' },
     etsy: { label: 'Etsy' }
   };
-  var PLATFORM_ORDER = ['amazon', 'trendyol', 'shopify', 'etsy'];
+  var PLATFORM_ORDER = ['amazon', 'trendyol', 'n11', 'shopify', 'shopier', 'etsy'];
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6.5 7l.7 12a2 2 0 0 0 2 1.9h5.6a2 2 0 0 0 2-1.9l.7-12"/></svg>';
   var IMAGE_PLACEHOLDER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="22" height="22"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M20 15l-4.5-4.5a1.5 1.5 0 0 0-2.12 0L4 19"/></svg>';
 
   var el = {};
-  ['cost', 'sector', 'margin', 'carrier', 'desi', 'dimW', 'dimD', 'dimH', 'dimApply',
+  ['cost', 'sector', 'sectorSearch', 'margin', 'carrier', 'desi', 'dimW', 'dimD', 'dimH', 'dimApply',
     'carrierNote', 'ads', 'iadeOrani', 'iadeMaliyet',
     'amazonOverride', 'trendyolOverride', 'trendyolKargoOverride', 'trendyolHizmetBedeli',
+    'n11Override', 'n11KargoOverride',
     'shopifyPlan', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY', 'shopifyUnits', 'etsyKargo',
+    'shopierOverride',
     'etsyPayment', 'etsyOffsite', 'etsyOverThreshold', 'etsyThresholdWrap',
+    'modeForwardBtn', 'modeReverseBtn', 'marginField', 'targetPriceFieldWrap', 'targetPrice',
+    'monthlyUnits', 'monthlyUnitsField', 'freshnessBanner', 'themeToggleBtn', 'themeIcon',
     'summary', 'summaryText', 'results', 'notesList', 'liveBar',
     'savedListBtn', 'savedCount', 'saveTrigger',
     'saveDialog', 'saveForm', 'saveDialogClose', 'saveDialogCancel',
@@ -31,8 +38,9 @@
 
   var cardRefs = {};       // platform key -> önceden oluşturulmuş DOM referansları
   var lastInput = null;    // en son readInput() çıktısı (kaydet anlık görüntüsü için)
-  var lastResults = null;  // en son KH.computeAll() çıktısı
+  var lastResults = null;  // en son KH.computeAll()/computeAllFromPrice() çıktısı
   var pendingImageDataUrl = null; // kaydet formunda seçilen (yeniden boyutlandırılmış) görsel
+  var currentMode = 'forward'; // 'forward' (maliyet+kâr -> fiyat) | 'reverse' (fiyat -> kâr)
 
   // Intl formatter'lari modul kapsamina alindi — her cagrida yeniden
   // olusturmak (onceki hali) gereksiz maliyetliydi; sonuc degismez.
@@ -124,6 +132,8 @@
       costTRY: numOrZero(el.cost),
       sectorId: el.sector.value,
       marginPct: numOrZero(el.margin),
+      targetPriceTRY: numOrZero(el.targetPrice),
+      monthlyUnits: numOrZero(el.monthlyUnits),
       kargoTRY: kargoTRY,
       reklamTRY: numOrZero(el.ads),
       iadeOraniPct: numOrZero(el.iadeOrani),
@@ -132,10 +142,13 @@
       trendyolOverridePct: numOrNull(el.trendyolOverride),
       trendyolKargoOverrideTRY: numOrNull(el.trendyolKargoOverride),
       trendyolHizmetBedeliTRY: numOrNull(el.trendyolHizmetBedeli),
+      n11OverridePct: numOrNull(el.n11Override),
+      n11KargoOverrideTRY: numOrNull(el.n11KargoOverride),
       shopifyPlanId: el.shopifyPlan.value,
       shopifyGatewayPct: numOrNull(el.shopifyGatewayPct),
       shopifyGatewayFixedTRY: numOrZero(el.shopifyGatewayFixedTRY),
       shopifyMonthlyUnits: numOrZero(el.shopifyUnits),
+      shopierOverridePct: numOrNull(el.shopierOverride),
       etsyKargoTRY: numOrZero(el.etsyKargo),
       etsyPaymentPct: numOrNull(el.etsyPayment),
       etsyOffsiteAds: el.etsyOffsite.checked,
@@ -159,7 +172,9 @@
         '<h3>' + meta.label + '</h3>' +
         '<p class="price"></p>' +
         '<p class="muted pct"></p>' +
+        '<p class="muted profit"></p>' +
         '<p class="muted sub"></p>' +
+        '<p class="muted monthly"></p>' +
         '<p class="warn"></p>' +
         '<ul class="breakdown"></ul>' +
         '<p class="error"></p>';
@@ -168,7 +183,9 @@
         card: card,
         price: card.querySelector('.price'),
         pct: card.querySelector('.pct'),
+        profit: card.querySelector('.profit'),
         sub: card.querySelector('.sub'),
+        monthly: card.querySelector('.monthly'),
         warn: card.querySelector('.warn'),
         breakdown: card.querySelector('.breakdown'),
         error: card.querySelector('.error')
@@ -176,32 +193,55 @@
     });
   }
 
+  // Hem ileri mod (maliyet+kâr -> fiyat) hem ters mod (fiyat -> kâr) AYNI kart
+  // şablonunu paylaşıyor — .price alanı ileri modda fiyatı, ters modda kâr
+  // marjı yüzdesini gösterir (ikisi de aynı büyük/serif stil, "bu kartın ana
+  // sayısı" rolü aynı). Ayrı bir şablon kurmak yerine bu şekilde tek bir
+  // render yolu korunuyor.
   function renderResults(results) {
     var valid = [];
+    var reverse = currentMode === 'reverse';
 
     PLATFORM_ORDER.forEach(function (key) {
       var r = results[key];
       var meta = PLATFORM_META[key];
       var ref = cardRefs[key];
 
-      if (r.unavailable || r.error) {
+      if (!r || r.unavailable || r.error) {
         ref.card.classList.add('is-unavailable');
         setText(ref.price, '', false);
+        ref.price.classList.remove('is-negative');
         ref.pct.textContent = '';
+        ref.profit.textContent = '';
         ref.sub.textContent = '';
+        ref.monthly.textContent = '';
         ref.warn.textContent = '';
         ref.breakdown.innerHTML = '';
-        ref.error.textContent = r.unavailable ? r.reason : r.error;
+        ref.error.textContent = r ? (r.unavailable ? r.reason : r.error) : '';
         return;
       }
 
       ref.card.classList.remove('is-unavailable');
-      valid.push({ key: key, label: meta.label, price: r.price });
-      setText(ref.price, fmtTRY(r.price), true);
       ref.error.textContent = '';
       ref.pct.textContent = r.usedPct != null ? ('Kullanılan oran: %' + r.usedPct.toFixed(2).replace(/\.00$/, '')) : '';
-      ref.sub.textContent = r.monthlySubTRY ? ('+ aylık abonelik payı: ' + fmtTRY(r.monthlySubTRY) + '/birim') : '';
-      ref.warn.textContent = r.tierAmbiguous ? '⚠ Bu fiyat, komisyon kademesinin sınırına çok yakın bir bantta — kendiyle tam tutarlı değil, daha güvenli (yüksek) taraf seçildi. Amazon panelinizden gerçek oranı teyit edin.' : '';
+
+      if (reverse) {
+        valid.push({ key: key, label: meta.label, sortVal: r.marginPct, marginPct: r.marginPct });
+        setText(ref.price, r.marginPct.toFixed(1).replace(/\.0$/, '') + '%', true);
+        ref.price.classList.toggle('is-negative', r.marginPct < 0);
+        ref.profit.textContent = 'Kâr: ' + fmtTRY(r.profitTRY) + ' / birim' + (r.profitTRY < 0 ? ' (zarar)' : '');
+        ref.sub.textContent = '';
+        ref.monthly.textContent = '';
+        ref.warn.textContent = '';
+      } else {
+        valid.push({ key: key, label: meta.label, sortVal: r.price, price: r.price });
+        setText(ref.price, fmtTRY(r.price), true);
+        ref.price.classList.remove('is-negative');
+        ref.profit.textContent = r.birimKarTRY != null ? ('Birim kâr: ' + fmtTRY(r.birimKarTRY)) : '';
+        ref.sub.textContent = r.monthlySubTRY ? ('+ aylık abonelik payı: ' + fmtTRY(r.monthlySubTRY) + '/birim') : '';
+        ref.monthly.textContent = r.monthlyProfitTRY != null ? ('Aylık kâr projeksiyonu: ' + fmtTRY(r.monthlyProfitTRY)) : '';
+        ref.warn.textContent = r.tierAmbiguous ? '⚠ Bu fiyat, komisyon kademesinin sınırına çok yakın bir bantta — kendiyle tam tutarlı değil, daha güvenli (yüksek) taraf seçildi. Amazon panelinizden gerçek oranı teyit edin.' : '';
+      }
 
       var bhtml = '<li><span>Maliyet + kargo + reklam + sabit ücretler</span><span>' + fmtTRY(r.fixedTRY) + '</span></li>';
       r.breakdown.forEach(function (b) {
@@ -210,32 +250,62 @@
       ref.breakdown.innerHTML = bhtml;
     });
 
-    if (valid.length > 1) {
-      valid.sort(function (a, b) { return a.price - b.price; });
-      var cheapest = valid[0], priciest = valid[valid.length - 1];
-      el.summaryText.innerHTML =
-        '<strong>' + cheapest.label + '</strong> bu ürün için en düşük satış fiyatıyla aynı kâr marjına ulaşıyor (' + fmtTRY(cheapest.price) + ').' +
-        (priciest.key !== cheapest.key ? ' En yüksek fiyat gerektiren: <strong>' + priciest.label + '</strong> (' + fmtTRY(priciest.price) + ').' : '');
-    } else if (valid.length === 1) {
-      el.summaryText.innerHTML = '<strong>' + valid[0].label + '</strong> için hesaplanan satış fiyatı: ' + fmtTRY(valid[0].price) + '.';
+    if (reverse) {
+      if (valid.length > 1) {
+        valid.sort(function (a, b) { return b.sortVal - a.sortVal; }); // yüksek marj önce
+        var best = valid[0], worst = valid[valid.length - 1];
+        el.summaryText.innerHTML =
+          'Girdiğiniz fiyatta en yüksek kâr marjı: <strong>' + best.label + '</strong> (%' + best.marginPct.toFixed(1) + ').' +
+          (worst.key !== best.key ? ' En düşük: <strong>' + worst.label + '</strong> (%' + worst.marginPct.toFixed(1) + ').' : '');
+      } else if (valid.length === 1) {
+        el.summaryText.innerHTML = '<strong>' + valid[0].label + '</strong> için bu fiyatta kâr marjı: %' + valid[0].marginPct.toFixed(1) + '.';
+      } else {
+        el.summaryText.textContent = '';
+      }
     } else {
-      el.summaryText.textContent = '';
+      if (valid.length > 1) {
+        valid.sort(function (a, b) { return a.sortVal - b.sortVal; });
+        var cheapest = valid[0], priciest = valid[valid.length - 1];
+        el.summaryText.innerHTML =
+          '<strong>' + cheapest.label + '</strong> bu ürün için en düşük satış fiyatıyla aynı kâr marjına ulaşıyor (' + fmtTRY(cheapest.price) + ').' +
+          (priciest.key !== cheapest.key ? ' En yüksek fiyat gerektiren: <strong>' + priciest.label + '</strong> (' + fmtTRY(priciest.price) + ').' : '');
+      } else if (valid.length === 1) {
+        el.summaryText.innerHTML = '<strong>' + valid[0].label + '</strong> için hesaplanan satış fiyatı: ' + fmtTRY(valid[0].price) + '.';
+      } else {
+        el.summaryText.textContent = '';
+      }
     }
-    el.saveTrigger.disabled = valid.length === 0;
+    // Ters modda "kaydet" kapalı — kaydedilen anlık görüntü fiyat/breakdown
+    // varsayar (bkz. fillSaveSnapshot/renderSavedList), ters modun ürettiği
+    // marj/kâr sonucu bu şablona uymuyor.
+    el.saveTrigger.disabled = valid.length === 0 || reverse;
   }
 
   // Formun altında kalan sonuçlara her seferinde kaydırmadan da "en ucuz kaç
   // paraya satmam lazım" sorusuna anında cevap versin diye üstte sabit duran
   // şerit. Aynı hesaplamayı tekrar kullanıyor, ayrı bir mantık değil.
   function updateLiveBar(results) {
+    var reverse = currentMode === 'reverse';
     var valid = PLATFORM_ORDER
       .map(function (key) { return { key: key, r: results[key] }; })
       .filter(function (x) { return x.r && !x.r.unavailable && !x.r.error; });
 
     if (!valid.length) {
-      el.liveBar.innerHTML = '<span class="live-dot"></span><span>Hiçbir platform için fiyat hesaplanamadı — girdileri kontrol edin.</span>';
+      el.liveBar.innerHTML = '<span class="live-dot"></span><span>' +
+        (reverse ? 'Hiçbir platform için kâr marjı hesaplanamadı — girdileri kontrol edin.' : 'Hiçbir platform için fiyat hesaplanamadı — girdileri kontrol edin.') +
+        '</span>';
       return;
     }
+
+    if (reverse) {
+      valid.sort(function (a, b) { return b.r.marginPct - a.r.marginPct; }); // yüksek marj önce
+      var mostProfitable = valid[0];
+      el.liveBar.innerHTML =
+        '<span class="live-dot ' + mostProfitable.key + '"></span>' +
+        '<span>En kârlı: <strong>' + PLATFORM_META[mostProfitable.key].label + '</strong> — %' + mostProfitable.r.marginPct.toFixed(1) + '</span>';
+      return;
+    }
+
     valid.sort(function (a, b) { return a.r.price - b.r.price; });
     var best = valid[0];
     el.liveBar.innerHTML =
@@ -253,9 +323,32 @@
 
   function recalc() {
     lastInput = readInput();
-    lastResults = KH.computeAll(lastInput);
+    lastResults = currentMode === 'reverse'
+      ? KH.computeAllFromPrice(lastInput, lastInput.targetPriceTRY)
+      : KH.computeAll(lastInput);
     renderResults(lastResults);
     updateLiveBar(lastResults);
+  }
+
+  // İleri mod (maliyet+kâr -> fiyat) / ters mod (fiyat -> kâr) arasında
+  // geçiş. Hedef alan grubunda hangi girdinin görüneceğini değiştirir ve
+  // hemen yeniden hesaplar — iki modun sonuç kartı şablonu ortak
+  // (bkz. renderResults), sadece kartın "ana sayısı" değişiyor.
+  function setMode(mode) {
+    if (mode !== 'forward' && mode !== 'reverse') return;
+    currentMode = mode;
+    var reverse = mode === 'reverse';
+
+    el.modeForwardBtn.classList.toggle('is-active', !reverse);
+    el.modeForwardBtn.setAttribute('aria-pressed', String(!reverse));
+    el.modeReverseBtn.classList.toggle('is-active', reverse);
+    el.modeReverseBtn.setAttribute('aria-pressed', String(reverse));
+
+    el.marginField.hidden = reverse;
+    el.targetPriceFieldWrap.hidden = !reverse;
+    if (el.monthlyUnitsField) el.monthlyUnitsField.hidden = reverse;
+
+    recalc();
   }
 
   function applyDims() {
@@ -264,6 +357,75 @@
       el.desi.value = KH.round2((w * d * h) / 3000);
       recalc();
     }
+  }
+
+  // Sektör arama: yazarken <select>'in seçenek listesini DEĞİŞTİRMİYORUZ —
+  // sadece etiketi eşleşen ilk seçeneğe "atlıyoruz". Filtreleyip <option>
+  // gizlemek yerine bilinçli olarak bu şekilde yapıldı, çünkü
+  // scripts/verify_ui.py testleri page.select_option("#sector", ...) ile
+  // doğrudan native <select> üzerinden çalışıyor — <option> listesini
+  // değiştiren bir filtre bu testleri kırar. Türkçe küçük harfe çevirme
+  // (İ/I → i/ı) locale'siz toLowerCase()'in yanlış sonuç vereceği bir konu,
+  // bu yüzden toLocaleLowerCase('tr-TR') kullanılıyor.
+  function handleSectorSearch() {
+    var q = el.sectorSearch.value.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return;
+    var match = KH.SECTORS.filter(function (s) {
+      return s.label.toLocaleLowerCase('tr-TR').indexOf(q) !== -1;
+    })[0];
+    if (match && el.sector.value !== match.id) {
+      el.sector.value = match.id;
+      recalc();
+    }
+  }
+
+  // Üstte sabit duran şeritte kur/komisyon verisinin YAŞINI gösterir —
+  // kullanıcı "bu oranlar hâlâ güncel mi" diye sormadan önce görsün diye.
+  // KH.FX.date "YYYY-MM-DD" formatında (bkz. calc.js); gün farkı UTC gün
+  // sınırına göre hesaplanıyor (yerel saat dilimi kaymasından etkilenmesin).
+  // Veriler oturum boyunca değişmediği için sadece init()'te bir kez çağrılır.
+  function renderFreshnessBanner() {
+    var fxDate = new Date(KH.FX.date + 'T00:00:00Z');
+    var now = new Date();
+    var todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    var days = Math.round((todayUTC - fxDate) / 86400000);
+    var dateLabel = fxDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    var ageText = days <= 0 ? 'bugün' : (days === 1 ? 'dün' : days + ' gün önce');
+    el.freshnessBanner.textContent = 'Kur ve komisyon verileri ' + dateLabel + ' tarihli anlık görüntü (' + ageText + ').';
+    el.freshnessBanner.classList.toggle('is-stale', days >= 30);
+  }
+
+  // --- Karanlık/açık tema ---
+  // Tercih tarayıcının localStorage'ında tutulur (bu araç gerçekten kurulan
+  // bir PWA — Claude.ai artifact'ı değil, dolayısıyla localStorage burada
+  // uygundur). Kayıtlı bir tercih yoksa sistem tercihine (prefers-color-scheme)
+  // bakılır. localStorage bazı gizli/kısıtlı tarayıcı modlarında erişilemez
+  // olabileceğinden erişimler try/catch ile korunuyor.
+  var THEME_KEY = 'kh-theme';
+  var THEME_ICON_SUN = '<circle cx="12" cy="12" r="4.5"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>';
+  var THEME_ICON_MOON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>';
+
+  function applyTheme(theme) {
+    document.body.classList.toggle('dark-theme', theme === 'dark');
+    el.themeIcon.innerHTML = theme === 'dark' ? THEME_ICON_MOON : THEME_ICON_SUN;
+    var label = theme === 'dark' ? 'Açık temaya geç' : 'Karanlık temaya geç';
+    el.themeToggleBtn.setAttribute('aria-label', label);
+    el.themeToggleBtn.setAttribute('title', label);
+  }
+
+  function initTheme() {
+    var stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch (e) { /* erişilemiyorsa sistem tercihine düş */ }
+    var theme = stored === 'dark' || stored === 'light'
+      ? stored
+      : ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+    applyTheme(theme);
+  }
+
+  function toggleTheme() {
+    var next = document.body.classList.contains('dark-theme') ? 'light' : 'dark';
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* kalıcı olmasa da oturum içinde çalışmaya devam eder */ }
   }
 
   function renderNotes() {
@@ -283,6 +445,9 @@
       'Etsy\'nin resmi "Currency Conversion Fee"si (%2,5) eklendi — help.etsy.com kaynaklı, YÜKSEK güven. Listeleme/ödeme para birimleri farklı olduğunda (bu araç Etsy fiyatlarını USD üzerinden TL\'ye çevirdiği için) uygulanır.',
       'İade (return) beklenen maliyeti: 1 Ocak 2026\'dan itibaren mesafeli satış sözleşmeleri yönetmeliğindeki değişiklikle, cayma hakkı kapsamındaki iade kargosu artık SATICIYA ait. "İade oranı% × iade başına maliyet" olarak beklenen değer formülüyle Amazon/Trendyol/Shopify\'ın fiyatına ekleniyor (Etsy hariç — satışları ağırlıkla yurt dışına gidiyor, farklı bir tüketici-hukuku kapsamına giriyor). Türkiye e-ticaretinde bunun için standart bir yüzde/sabit değer bulunamadı (kategoriye göre araştırmalarda %18-%70 arası rakamlar görüldü); bu yüzden ikisi de varsayılan 0 — kendi tahmininizi girmezseniz hesaba hiç girmez.',
       'Etsy\'nin Türkiye için düzenleyici işletim ücreti (regulatory operating fee) %2,27\'den %1,67\'ye DÜZELTİLDİ: resmi kaynağın (help.etsy.com) ülke bazlı tablosu doğrudan çekilip Türkiye satırı okundu (iki bağımsız çekimde de aynı sonuç). Rakip iki üçüncül kaynak hâlâ farklı değerler veriyor (%2,27 ve belirsiz bir "%0,32-%1,15" aralığı) ama ikisi de resmi sayfa değil; bu yüzden resmi kaynağa güvenildi. Kalan küçük belirsizlik: sayfa bir otomatik özetleme aracıyla okundu, ham HTML birebir teyit edilmedi — kesinlik için kendi Etsy satıcı panelinizden (Ödemeler → Ücretler) teyit edebilirsiniz.',
+      'n11 EKLENDİ (3. tur araştırma, 10 Ağustos 2026): komisyon oranları kategori bazlı, 3 bağımsız ikincil kaynaktan derlendi — Amazon gibi resmi/tek bir oran sayfası bulunamadı, ORTA güven. Kategori kapsamı KASITLI OLARAK KISMİ: yalnızca 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik olduğu ~8/31 sektör dolduruldu — Trendyol\'daki "veri yoksa boş bırak" deseninin aynısı; eksik sektörlerde "n11 → Komisyon" alanından kendi oranınızı girebilirsiniz. Komisyondan ayrı, tüm kategorilerde sabit bir "%1 pazarlama + %0,67 pazaryeri" hizmet bedeli de (KDV dahil edilerek) hesaba katıldı. Kargo: n11\'de taşıyıcı seçimi varsayılan olarak serbest (mağazalar kendi kargo firmasını belirler, sadece isteğe bağlı "Özel Kargo Kampanyası"na katılanlar kapalı listeyle sınırlı) — bu yüzden soldaki genel kargo tablosu Amazon/Shopify ile aynı şekilde doğrudan kullanılıyor.',
+      'Shopier EKLENDİ (3. tur araştırma, 10 Ağustos 2026): komisyon sabit %2,99 + 0,49₺ (yurt içi) — biri Shopier\'in kendi resmi sayfası olmak üzere 2 bağımsız ve güncel (Kasım 2025 sonrası) kaynakla teyitli, YÜKSEK güven. Daha eski (Eylül 2025) bir üçüncü kaynak aylık satış hacmine göre kademeli bir oran öne sürüyordu; hem daha güncel hem birincil kaynak sabit oranı doğruladığı için kademeli yapı MODELLENMEDİ. Aylık üyelik veya listeleme ücreti yok, sadece satış üzerinden kesinti var. Kargo hizmeti Shopier üzerinden opsiyonel (zorunlu değil), bu yüzden soldaki genel kargo tablosu doğrudan kullanılıyor.',
+      'GittiGidiyor ARAŞTIRILDI ama EKLENMEDİ (10 Ağustos 2026): platformun Temmuz 2022\'de tamamen kapanıp eBay bünyesine katıldığı doğrulandı (Hepsiburada\'ya değil) — artık aktif bir pazaryeri olmadığı için hesaba dahil edilmedi.',
       'Kayıtlı ürünler bu tarayıcının kendi cihaz-içi veritabanında (IndexedDB) tutulur — sunucuya gönderilmez, başka bir cihazdan/tarayıcıdan görünmez, tarayıcı verisi temizlenirse silinir.'
     ];
     el.notesList.innerHTML = notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
@@ -529,6 +694,8 @@
     buildResultCards();
     populateSelects();
     renderNotes();
+    initTheme();
+    renderFreshnessBanner();
     el.etsyOffsite.addEventListener('change', function () {
       el.etsyThresholdWrap.style.display = el.etsyOffsite.checked ? '' : 'none';
       recalc();
@@ -536,11 +703,24 @@
     el.etsyThresholdWrap.style.display = 'none';
     el.dimApply.addEventListener('click', applyDims);
 
+    // #sectorSearch bilinçli olarak bu genel listeden HARİÇ tutuluyor:
+    // readInput() onun değerini hiç okumuyor (sadece el.sector.value'yu
+    // etkiliyor), bu yüzden buraya recalc bağlamak her tuş vuruşunda
+    // gereksiz bir hesaplama daha yapar. Kendi işleyicisi aşağıda.
     var inputs = document.querySelectorAll('input, select');
     inputs.forEach(function (inp) {
+      if (inp === el.sectorSearch) return;
       inp.addEventListener('input', recalc);
       inp.addEventListener('change', recalc);
     });
+    el.sectorSearch.addEventListener('input', handleSectorSearch);
+
+    // Mod geçişi (maliyetten fiyat <-> fiyattan kâr)
+    el.modeForwardBtn.addEventListener('click', function () { setMode('forward'); });
+    el.modeReverseBtn.addEventListener('click', function () { setMode('reverse'); });
+
+    // Tema geçişi
+    el.themeToggleBtn.addEventListener('click', toggleTheme);
 
     el.liveBar.addEventListener('click', function () {
       el.results.scrollIntoView({ behavior: 'smooth', block: 'start' });

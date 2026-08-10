@@ -19,15 +19,32 @@
   --muted-2: #A7A290;
   --error: #A8341F;
 
+  /* Üstteki sabit "chrome" şeridi (topbar + live-bar + freshness-banner)
+     KASITLI OLARAK tema geçişine katılmıyor — her zaman koyu zemin/açık
+     metin, ışık/karanlık modda da aynı (bkz. 10 Ağustos 2026 karanlık mod
+     eklentisi). --ink/--paper karanlık modda YER DEĞİŞTİRİR (bkz.
+     body.dark-theme aşağıda); bu şerit o yer değişiminden ETKİLENMEMELİ —
+     aksi halde karanlık sayfanın tepesinde parlak beyaz bir çubuk kalırdı.
+     Bu yüzden aynı değerler burada AYRI, sabit değişkenlerle de tutuluyor. */
+  --chrome-bg: #17160F;
+  --chrome-bg-soft: #3A3830;
+  --chrome-fg: #F5F3EC;
+
   /* Platform vurgu renkleri — kategorik, çift çift ayırt edilebilirlik için
      doğrulanmış set (OKLab ΔE + protan/deutan simülasyonu ile kontrol edildi,
      bkz. scripts/ — node ile dataviz validator'ı çalıştırıldı). Gerçek marka
      renkleri kasıtlı kullanılmadı: Amazon/Trendyol/Etsy üçü de turuncu
-     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 4 ton, sitedeki
-     TEK renk kaynağı — geri kalan her şey mürekkep/kağıt. */
+     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 6 ton (10 Ağustos
+     2026'da n11/Shopier eklenmesiyle 4'ten 6'ya çıktı), sitedeki TEK renk
+     kaynağı — geri kalan her şey mürekkep/kağıt. Karanlık mod için AYNI
+     hueler farklı L/C adımlarıyla yeniden doğrulandı (bkz. body.dark-theme) —
+     otomatik ters çevirme değil, "aynı rampanın karanlık zemine göre
+     doğrulanmış kendi adımı" (dataviz kuralı). */
   --accent-amazon: #2a78d6;
   --accent-trendyol: #eb6834;
+  --accent-n11: #8a5f00;
   --accent-shopify: #1baf7a;
+  --accent-shopier: #973c78;
   --accent-etsy: #4a3aa7;
 
   --font-serif: Georgia, 'Iowan Old Style', 'Noto Serif', 'Times New Roman', serif;
@@ -47,8 +64,41 @@
   --sticky-head-h: 64px;
 }
 
+/* --- Karanlık tema ---
+   "Otomatik ters çevirme değil" ilkesi (dataviz kuralı): --ink/--paper basit
+   bir invert() değil, karanlık zemine göre AYRI seçilmiş bir çift (bkz.
+   aşağıdaki node ile doğrulanmış L/C değerleri). Vurgu renkleri de aynı
+   hue'ların karanlık banda (OKLCH L 0.48–0.67) göre yeniden doğrulanmış
+   kendi adımları — 10 Ağustos 2026'da scripts/validate_palette.js ile
+   kontrol edildi (6 renk aynı anda, --pairs all): CVD ayrımı ve normal
+   görüş eşiği geçti, kontrast tüm 6 vurgu için >=3:1. --chrome-* burada
+   KASITLI OLARAK tekrar tanımlanmıyor (yukarıdaki açıklamaya bakın). */
+body.dark-theme {
+  --ink: #F1EEE4;
+  --paper: #17160F;
+  --surface: #211F16;
+  --line: #332F20;
+  --line-strong: #4A4632;
+  --muted: #A9A28C;
+  --muted-2: #726C57;
+  --error: #f2446f;
+
+  --accent-amazon: #4890eb;
+  --accent-trendyol: #e06535;
+  --accent-n11: #955a00;
+  --accent-shopify: #009463;
+  --accent-shopier: #cc66a7;
+  --accent-etsy: #6056c0;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
+  /* Tema (açık/karanlık) değiştiğinde --ink/--paper/--surface/--accent-*
+     gibi renk değişkenleri anında değil, yumuşak geçişle güncellensin diye
+     düşük özgüllüklü bir taban tanım — bkz. body.dark-theme yukarıda. Daha
+     spesifik seçicilerin (ör. .icon-btn) KENDİ transition tanımı zaten bunu
+     eziyor, bu yüzden mevcut hover/basma animasyonlarıyla çakışmıyor. */
+  transition: background-color 0.25s var(--ease-out), border-color 0.25s var(--ease-out), color 0.25s var(--ease-out);
 }
 
 html {
@@ -66,6 +116,18 @@ body {
 
 h1, h2, h3, h4, p, ul {
   margin: 0;
+}
+
+/* [hidden] normalde tarayıcının kendi stil sayfasından display:none alır,
+   ama bu ÖNCELİĞİ herhangi bir yazar kuralı (ör. .field{display:flex})
+   otomatik olarak eziyor — kaynak sırası/özgüllük fark etmez, user-agent
+   katmanı her zaman author katmanının altında kalır. 10 Ağustos 2026'da
+   #targetPriceFieldWrap (.field + [hidden]) ileri modda görünür kalarak bu
+   hataya düştü (bkz. app.js setMode) — ekran görüntüsüyle yakalandı, hesap
+   mantığı doğruydu ama alan gizlenmiyordu. Standart düzeltme: [hidden]'ı
+   açıkça en yüksek öncelikle geri kazandırmak. */
+[hidden] {
+  display: none !important;
 }
 
 button, input, select {
@@ -101,6 +163,7 @@ a {
   }
   * {
     scroll-behavior: auto !important;
+    transition: none !important;
   }
 }
 
@@ -110,7 +173,7 @@ a {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--ink);
+  background: var(--chrome-bg);
   transition: box-shadow 0.3s var(--ease-out);
 }
 
@@ -123,7 +186,7 @@ body.is-scrolled .sticky-head {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  color: var(--paper);
+  color: var(--chrome-fg);
   padding: calc(env(safe-area-inset-top, 0) + var(--space-4)) var(--space-4) var(--space-3) var(--space-4);
   transition: padding 0.3s var(--ease-out);
 }
@@ -142,6 +205,13 @@ body.is-scrolled .topbar {
   transition: font-size 0.3s var(--ease-out);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 body.is-scrolled .topbar .brand {
   font-size: 1.08rem;
 }
@@ -158,7 +228,7 @@ body.is-scrolled .topbar .brand {
   background: transparent;
   border: 1px solid rgba(245, 243, 236, 0.28);
   border-radius: var(--radius);
-  color: var(--paper);
+  color: var(--chrome-fg);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
@@ -192,8 +262,8 @@ body.is-scrolled .topbar .brand {
   height: 17px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--chrome-fg);
+  color: var(--chrome-bg);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 17px;
@@ -210,8 +280,8 @@ body.is-scrolled .topbar .brand {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  background: var(--ink-soft);
-  color: var(--paper);
+  background: var(--chrome-bg-soft);
+  color: var(--chrome-fg);
   padding: 9px var(--space-4);
   font-size: 0.82rem;
   line-height: 1.3;
@@ -234,7 +304,30 @@ body.is-scrolled .topbar .brand {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--paper);
+  background: var(--chrome-fg);
+}
+
+/* Kur/oran verisinin yaşını gösteren ikinci, daha sakin şerit (bkz. app.js
+   renderFreshnessBanner). live-bar kadar dikkat çekmemeli — bu yüzden daha
+   küçük punto ve kısılmış opaklık; sadece .is-stale (30+ gün) tam opaklığa
+   çıkıp okunurluğu artırıyor, alarm rengi değil (veriler yanlış değil,
+   sadece eski — kullanıcıyı korkutmadan bilgilendirmek amacı). */
+.freshness-banner {
+  margin: 0;
+  padding: 5px var(--space-4) 8px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--chrome-fg);
+  opacity: 0.6;
+}
+
+.freshness-banner:empty {
+  display: none;
+}
+
+.freshness-banner.is-stale {
+  opacity: 0.95;
+  font-weight: 600;
 }
 
 /* --- Sayfa iskeleti --- */
@@ -280,6 +373,40 @@ body.is-scrolled .topbar .brand {
 
 .form-card .field-group:first-child h2 {
   margin-top: 0;
+}
+
+/* --- Mod geçişi: maliyetten fiyat <-> fiyattan kâr --- */
+
+.mode-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: var(--space-5);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 9px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mode-btn:hover {
+  color: var(--ink);
+}
+
+.mode-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 /* --- Form alanları --- */
@@ -369,6 +496,14 @@ body.is-scrolled .topbar .brand {
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
+}
+
+/* Sektör arama kutusu: hemen altındaki <select id="sector">'ın "atlanacak"
+   seçimini filtreliyor (bkz. app.js handleSectorSearch) — <option> listesi
+   DEĞİŞMİYOR, bu yüzden görsel olarak select'in bir eklentisi/ön-alanı gibi
+   dursun diye aralarındaki boşluk daraltıldı. */
+.sector-search {
+  margin-bottom: 2px;
 }
 
 .field input:focus,
@@ -536,7 +671,9 @@ details.advanced[open] summary {
 
 .platform-group.amazon   { --accent: var(--accent-amazon); }
 .platform-group.trendyol { --accent: var(--accent-trendyol); }
+.platform-group.n11      { --accent: var(--accent-n11); }
 .platform-group.shopify  { --accent: var(--accent-shopify); }
+.platform-group.shopier  { --accent: var(--accent-shopier); }
 .platform-group.etsy     { --accent: var(--accent-etsy); }
 
 /* --- Özet: renkli kutu değil, tipografik ifade --- */
@@ -607,12 +744,16 @@ details.advanced[open] summary {
 
 .result-card.amazon   { --accent: var(--accent-amazon); }
 .result-card.trendyol { --accent: var(--accent-trendyol); }
+.result-card.n11      { --accent: var(--accent-n11); }
 .result-card.shopify  { --accent: var(--accent-shopify); }
+.result-card.shopier  { --accent: var(--accent-shopier); }
 .result-card.etsy     { --accent: var(--accent-etsy); }
 
 .live-dot.amazon   { background: var(--accent-amazon); }
 .live-dot.trendyol { background: var(--accent-trendyol); }
+.live-dot.n11      { background: var(--accent-n11); }
 .live-dot.shopify  { background: var(--accent-shopify); }
+.live-dot.shopier  { background: var(--accent-shopier); }
 .live-dot.etsy     { background: var(--accent-etsy); }
 
 .result-card h3 {
@@ -639,6 +780,13 @@ details.advanced[open] summary {
   display: none;
 }
 
+/* Ters modda (fiyattan kâr) kartın ana rakamı fiyat değil kâr marjı % —
+   zarar senaryosunda (marjPct < 0) bunu --error rengiyle işaretliyoruz,
+   aynı mantık .result-card .error'daki gibi "dikkat" anlamı taşıyor. */
+.result-card .price.is-negative {
+  color: var(--error);
+}
+
 /* Fiyat değiştiğinde kısa bir renk-geçişi — her tuş vuruşunda kartı yeniden
    çizmek yerine (bkz. app.js), sadece metni güncelleyip bu animasyonu
    tetikliyoruz. Sayfa yüklenirken oynayan giriş animasyonundan ayrı. */
@@ -655,6 +803,16 @@ details.advanced[open] summary {
   font-size: 0.78rem;
   color: var(--muted);
   margin-bottom: var(--space-1);
+}
+
+/* .pct/.profit/.sub/.monthly hepsi bazı kart+mod kombinasyonlarında boş
+   kalabiliyor (ör. Etsy'de usedPct yok, ters modda sub/monthly hiç
+   doldurulmuyor — bkz. app.js renderResults). Boş bir <p> yine de satır
+   yüksekliği + margin kaplayıp kartlarda tutarsız boşluklar bırakıyordu;
+   diğer boş-eleman kuralları (.error:empty, .warn:empty vb.) ile aynı
+   mantık burada da uygulanıyor. */
+.result-card .muted:empty {
+  display: none;
 }
 
 .result-card .error {
@@ -1027,16 +1185,21 @@ summary:focus-visible {
 }
 
 @media (min-width: 1300px) {
-  /* .results burada 4 sütuna geçiyor ama .page 900px eşiğinden beri
+  /* .results burada 3 sütuna geçiyor ama .page 900px eşiğinden beri
      1180px'te sabitti — konteyner büyümeden sütun sayısı artınca her kart
-     ~157px'e sıkışıyordu (1180px tavanla hiçbir geniş ekran gerçekte daha
-     fazla yer vermiyordu). Aynı eşikte .page'i de büyüterek bu boşluğu
-     kapatıyoruz; 1440px'te sabitleniyor (kart başına ~222px). */
+     sıkışıyordu (1180px tavanla hiçbir geniş ekran gerçekte daha fazla yer
+     vermiyordu). Aynı eşikte .page'i de büyüterek bu boşluğu kapatıyoruz;
+     1440px'te sabitleniyor.
+     10 Ağustos 2026: n11/Shopier eklenince kart sayısı 4'ten 6'ya çıktı.
+     6 sütun bu genişlikte kartları çok daraltırdı (~144px, fiyat/breakdown
+     için yetersiz) — bunun yerine 3x2 düzen kullanılıyor (kart başına
+     ~300px, eski 4 sütunlu düzenden bile daha ferah). PLATFORM_ORDER ile
+     satır 1: amazon/trendyol/n11, satır 2: shopify/shopier/etsy. */
   .page {
     max-width: 1440px;
   }
 
   .results {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }

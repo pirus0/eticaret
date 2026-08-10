@@ -45,7 +45,7 @@ def main():
         check("Sektor secenekleri yuklendi", sector_options > 5, f"{sector_options} secenek")
 
         cards = page.query_selector_all(".result-card")
-        check("4 platform karti render edildi", len(cards) == 4, f"{len(cards)} kart")
+        check("6 platform karti render edildi", len(cards) == 6, f"{len(cards)} kart")
 
         prices = page.eval_on_selector_all(".result-card .price", "els => els.map(e => e.textContent)")
         check("Tum kartlarda fiyat var", all(p.strip() not in ("", "—") for p in prices), str(prices))
@@ -54,10 +54,10 @@ def main():
         check("Live-bar dolu", len(live_bar_text.strip()) > 0, live_bar_text[:80])
 
         border_colors = page.eval_on_selector_all(".result-card", "els => els.map(e => getComputedStyle(e).borderTopColor)")
-        check("4 kartin ust kenarligi 4 farkli renk", len(set(border_colors)) == 4, str(border_colors))
+        check("6 kartin ust kenarligi 6 farkli renk", len(set(border_colors)) == 6, str(border_colors))
 
         group_classes = page.eval_on_selector_all(".platform-group", "els => els.map(e => e.className)")
-        check("4 platform grubu var", len(group_classes) == 4, str(group_classes))
+        check("6 platform grubu var", len(group_classes) == 6, str(group_classes))
 
         old_price = page.eval_on_selector(".result-card .price", "e => e.textContent")
         cost_input = page.query_selector("#cost")
@@ -192,6 +192,151 @@ def main():
         page.fill("#iadeOrani", "0")
         page.fill("#iadeMaliyet", "0")
         page.wait_for_timeout(200)
+
+        # ============== YENI PAZARYERLERI: n11 / Shopier (3. tur, 10 Agustos 2026) ==============
+        n11_before = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        shopier_before_n11 = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        page.fill("#n11Override", "15")
+        page.wait_for_timeout(200)
+        n11_after = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        shopier_after_n11 = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        check("n11 komisyon override girilince n11 fiyati degisiyor",
+              n11_before != n11_after, f"{n11_before} -> {n11_after}")
+        check("n11 komisyon override Shopier fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              shopier_before_n11 == shopier_after_n11, f"{shopier_before_n11} -> {shopier_after_n11}")
+        page.fill("#n11Override", "")
+        page.wait_for_timeout(200)
+
+        # n11 kargo override: n11'in kargo secimi ZORUNLU kapali bir liste
+        # (Trendyol'la ayni desen) -- dokumantasyon yazilirken n11'in kendi
+        # resmi destek sayfasiyla dogrulanip duzeltildi (ilk surumde "serbest"
+        # saniliyordu, bkz. calc.js basi 3. tur notu). Girilirse paylasilan
+        # kargoTRY yerine kullanilmali; Shopier'i (izole platform) ETKILEMEMELI.
+        n11_kargo_before = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        shopier_before_n11kargo = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        page.fill("#n11KargoOverride", "500")
+        page.wait_for_timeout(200)
+        n11_kargo_after = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        shopier_after_n11kargo = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        check("n11 kargo override girilince n11 fiyati degisiyor",
+              n11_kargo_before != n11_kargo_after, f"{n11_kargo_before} -> {n11_kargo_after}")
+        check("n11 kargo override Shopier fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              shopier_before_n11kargo == shopier_after_n11kargo, f"{shopier_before_n11kargo} -> {shopier_after_n11kargo}")
+        page.fill("#n11KargoOverride", "")
+        page.wait_for_timeout(200)
+
+        shopier_before = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        n11_before_sh = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        page.fill("#shopierOverride", "8")
+        page.wait_for_timeout(200)
+        shopier_after = page.eval_on_selector(".result-card.shopier .price", "e => e.textContent")
+        n11_after_sh = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        check("Shopier komisyon override girilince Shopier fiyati degisiyor",
+              shopier_before != shopier_after, f"{shopier_before} -> {shopier_after}")
+        check("Shopier komisyon override n11 fiyatini ETKILEMIYOR (platform bazli izolasyon)",
+              n11_before_sh == n11_after_sh, f"{n11_before_sh} -> {n11_after_sh}")
+        page.fill("#shopierOverride", "")
+        page.wait_for_timeout(200)
+
+        # n11 verisi olmayan bir sektorde (saat) karti "unavailable" gostermeli.
+        page.select_option("#sector", "saat")
+        page.wait_for_timeout(200)
+        n11_unavailable = page.eval_on_selector(".result-card.n11", "el => el.classList.contains('is-unavailable')")
+        check("n11 verisi olmayan sektorde n11 karti 'unavailable' isaretleniyor", n11_unavailable)
+        page.select_option("#sector", "giyim")
+        page.wait_for_timeout(200)
+
+        # ============== SEKTOR ARAMA ==============
+        # Arama, <select>'in secenek listesini degistirmeden ("filtrelemeden")
+        # sadece ilk eslesen etikete atlamali (bkz. app.js handleSectorSearch) —
+        # bu yuzden secenek sayisi once/sonra AYNI kalmali.
+        sector_options_before_search = page.eval_on_selector("#sector", "el => el.options.length")
+        page.fill("#sectorSearch", "ayakkab")
+        page.wait_for_timeout(200)
+        sector_value_after_search = page.eval_on_selector("#sector", "el => el.value")
+        sector_options_after_search = page.eval_on_selector("#sector", "el => el.options.length")
+        check("Sektor arama dogru sektore atliyor (ayakkab -> ayakkabi)", sector_value_after_search == "ayakkabi", sector_value_after_search)
+        check("Sektor arama <select> secenek listesini DEGISTIRMIYOR", sector_options_after_search == sector_options_before_search,
+              f"{sector_options_before_search} -> {sector_options_after_search}")
+        page.fill("#sectorSearch", "")
+        page.select_option("#sector", "giyim")
+        page.wait_for_timeout(200)
+
+        # ============== MOD GECISI: maliyetten fiyat <-> fiyattan kar ==============
+        forward_active = page.eval_on_selector("#modeForwardBtn", "el => el.classList.contains('is-active')")
+        check("Baslangicta 'Maliyetten fiyat' modu aktif", forward_active)
+        # NOT: sadece el.hidden (IDL ozelligi) degil, GERCEK gorunurlugu
+        # (computed display) de kontrol ediyoruz -- [hidden] ozniteligi
+        # herhangi bir yazar CSS kurali tarafindan (ör. .field{display:flex})
+        # sessizce ezilebilir; 10 Agustos 2026'da tam bu sekilde bir hata
+        # yakalandi (ekran goruntusuyle, el.hidden testi GECIYORDU ama alan
+        # GORUNUYORDU). Bkz. styles.css [hidden]{display:none !important}.
+        margin_field_visible = page.eval_on_selector("#marginField", "el => !el.hidden && getComputedStyle(el).display !== 'none'")
+        target_field_hidden = page.eval_on_selector("#targetPriceFieldWrap", "el => el.hidden && getComputedStyle(el).display === 'none'")
+        check("Ileri modda hedef-kar alani GERCEKTEN gorunur, hedef-fiyat alani GERCEKTEN gizli",
+              margin_field_visible and target_field_hidden)
+
+        page.click("#modeReverseBtn")
+        page.wait_for_timeout(200)
+        reverse_active = page.eval_on_selector("#modeReverseBtn", "el => el.classList.contains('is-active')")
+        reverse_aria = page.eval_on_selector("#modeReverseBtn", "el => el.getAttribute('aria-pressed')")
+        check("'Fiyattan kar' moduna gecince buton aktifleniyor", reverse_active)
+        check("'Fiyattan kar' modunda aria-pressed=true", reverse_aria == "true", reverse_aria)
+        margin_field_hidden_rev = page.eval_on_selector("#marginField", "el => el.hidden && getComputedStyle(el).display === 'none'")
+        target_field_visible_rev = page.eval_on_selector("#targetPriceFieldWrap", "el => !el.hidden && getComputedStyle(el).display !== 'none'")
+        check("Ters modda hedef-fiyat alani GERCEKTEN gorunur, hedef-kar alani GERCEKTEN gizli",
+              margin_field_hidden_rev and target_field_visible_rev)
+
+        page.fill("#targetPrice", "500")
+        page.wait_for_timeout(250)
+        reverse_price_text = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        check("Ters modda kart yuzde (%) gosteriyor, para birimi degil", "%" in reverse_price_text, reverse_price_text)
+        save_disabled_reverse = page.eval_on_selector("#saveTrigger", "el => el.disabled")
+        check("Ters modda 'Kaydet' devre disi (kaydetme sablonu fiyat/breakdown varsayar)", save_disabled_reverse)
+
+        # Zarar senaryosu: cok dusuk bir fiyat girilince negatif marj + .is-negative sinifi beklenir.
+        page.fill("#targetPrice", "1")
+        page.wait_for_timeout(250)
+        loss_class = page.eval_on_selector(".result-card.amazon .price", "e => e.className")
+        check("Ters modda zarar senaryosunda .is-negative sinifi ekleniyor", "is-negative" in loss_class, loss_class)
+
+        page.click("#modeForwardBtn")
+        page.wait_for_timeout(200)
+        forward_active_again = page.eval_on_selector("#modeForwardBtn", "el => el.classList.contains('is-active')")
+        forward_price_text = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        check("'Maliyetten fiyat' moduna geri donunce buton aktifleniyor", forward_active_again)
+        check("Ileri moda donunce kart tekrar para birimi gosteriyor", "%" not in forward_price_text, forward_price_text)
+
+        # ============== GUNCELLIK SERIDI (freshness banner) ==============
+        freshness_text = page.eval_on_selector("#freshnessBanner", "el => el.textContent")
+        check("Guncellik seridi dolu (kur/oran veri tarihini gosteriyor)", len(freshness_text.strip()) > 0, freshness_text)
+
+        # ============== KARANLIK / ACIK TEMA ==============
+        dark_before = page.evaluate("document.body.classList.contains('dark-theme')")
+        check("Baslangicta karanlik tema KAPALI (sistem tercihi acik varsayildi)", not dark_before)
+        bg_before = page.eval_on_selector("body", "el => getComputedStyle(el).backgroundColor")
+        page.click("#themeToggleBtn")
+        page.wait_for_timeout(350)  # renk geçiş animasyonunun bitmesini bekle
+        dark_after = page.evaluate("document.body.classList.contains('dark-theme')")
+        bg_after = page.eval_on_selector("body", "el => getComputedStyle(el).backgroundColor")
+        check("Tema dugmesine tiklayinca karanlik tema ACILIYOR", dark_after)
+        check("Karanlik temada sayfa arkaplan rengi degisiyor", bg_before != bg_after, f"{bg_before} -> {bg_after}")
+        stored_theme = page.evaluate("localStorage.getItem('kh-theme')")
+        check("Tema tercihi localStorage'a yaziliyor", stored_theme == "dark", stored_theme)
+        topbar_bg_dark = page.eval_on_selector(".sticky-head", "el => getComputedStyle(el).backgroundColor")
+        check("Karanlik temada ustteki chrome seridi HALA koyu (tema gecisine katilmiyor)",
+              topbar_bg_dark == "rgb(23, 22, 15)", topbar_bg_dark)
+
+        # Sayfa yenilenince tercih kalici olmali.
+        page.reload(wait_until="networkidle")
+        dark_after_reload = page.evaluate("document.body.classList.contains('dark-theme')")
+        check("Sayfa yenilenince karanlik tema tercihi KALICI", dark_after_reload)
+
+        # Tekrar acik temaya don (sonraki testler acik temayi varsayiyor).
+        page.click("#themeToggleBtn")
+        page.wait_for_timeout(350)
+        dark_final = page.evaluate("document.body.classList.contains('dark-theme')")
+        check("Tekrar tiklayinca acik temaya donuyor", not dark_final)
 
         # ============== YENI TASARIM ==============
         summary_bg_image = page.eval_on_selector("#summary", "el => getComputedStyle(el).backgroundImage")
@@ -358,6 +503,14 @@ def main():
         amazon_warn_normal = page.eval_on_selector(".result-card.amazon .warn", "el => el.textContent")
         check("Normal durumda Amazon karti uyari GOSTERMIYOR", amazon_warn_normal.strip() == "", amazon_warn_normal)
 
+        # Butun etkilesimli akis (mod gecisi, tema degisimi, sayfa yenileme dahil)
+        # boyunca hic konsol hatasi birikmemis mi? (Ilk kontrol satir 39'da sadece
+        # ilk sayfa yuklemesini kapsiyordu; page.on() dinleyicisi reload'lar dahil
+        # butun oturum boyunca calismaya devam ediyor, bu yuzden burada TEKRAR
+        # kontrol etmek reload/tema/mod gecisi gibi sonradan eklenen akislarda
+        # sessizce biriken hatalari da yakalar.)
+        check("Tum etkilesimli oturum boyunca konsol hatasi birikmedi", len(console_errors) == 0, "; ".join(console_errors))
+
         # Genis ekran: form|sonuc iki sutun + sonuc paneli sticky mi?
         wide = browser.new_page(viewport={"width": 1400, "height": 900})
         wide.goto(f"{BASE}/index.html", wait_until="networkidle")
@@ -366,9 +519,9 @@ def main():
         results_position = wide.eval_on_selector(".layout-results", "el => getComputedStyle(el).position")
         check("Sonuc paneli sticky", results_position == "sticky", results_position)
         col_count = wide.eval_on_selector("#results", "el => getComputedStyle(el).gridTemplateColumns.split(' ').length")
-        check("1400px genislikte 4 sonuc karti yan yana", col_count == 4, col_count)
+        check("1400px genislikte 3 sonuc karti yan yana (6 kart, 3x2)", col_count == 3, col_count)
         page_width = wide.eval_on_selector(".page", "el => el.getBoundingClientRect().width")
-        check("1400px genislikte .page 1180px sabitinden genisledi (4 sutuna yer acmak icin)", page_width > 1180, page_width)
+        check("1400px genislikte .page 1180px sabitinden genisledi (3 sutuna yer acmak icin)", page_width > 1180, page_width)
         wide.screenshot(path="verify_screenshot_wide.png", full_page=True)
         wide.close()
 

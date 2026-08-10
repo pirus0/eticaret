@@ -1,9 +1,11 @@
 # Kâr Marjı Hesaplayıcı
 
-Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, Shopify ve Etsy'de
-o hedefe ulaşmak için gereken satış fiyatını — komisyon, kargo ve (opsiyonel) reklam
-giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir PWA (telefona
-"uygulama gibi" eklenebilen web aracı).
+Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, n11, Shopify,
+Shopier ve Etsy'de o hedefe ulaşmak için gereken satış fiyatını — komisyon, kargo ve
+(opsiyonel) reklam giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir
+PWA (telefona "uygulama gibi" eklenebilen web aracı). Ters yönde de çalışır: elinizde
+zaten bir satış fiyatı varsa (ör. rakip fiyatı), o fiyatın hangi kâr marjına denk
+geldiğini de hesaplar.
 
 Build adımı yok. Sunucu tarafı yok. Tüm hesaplama tarayıcıda, `calc.js` içinde çalışıyor.
 
@@ -21,17 +23,21 @@ icons/                 PWA ikonları (favicon, apple-touch-icon, 192/512, maskab
 test.js                 calc.js için Node test paketi (tarayıcısız, hızlı)
 scripts/gen_icons.py         İkonları yeniden üretmek için Python/Pillow betiği
 scripts/verify_ui.py           Gerçek tarayıcıda (Playwright) uçtan uca UI doğrulaması
+scripts/capture_screenshots.py  Gözle inceleme için ekran görüntüsü alma betiği (Playwright)
 research/              Oranların dayandığı kaynak notları (tarih + link + güven seviyesi)
 ```
 
 ## Tasarım
 
-Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/Shopify/Etsy'yi ayırt eden
-4 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan yok, "otomatik"
-seçilmiş bir SaaS-mor teması yok. O 4 renk de göz kararı seçilmedi: `dataviz`
-paletinin çift-çift-ayırt-edilebilirlik doğrulayıcısından geçirildi (gerçek marka
-renkleri denendiğinde Amazon/Trendyol/Etsy'nin üçü de turuncu ailesinde çıkıp
-`normal-vision ΔE 13.7` ile başarısız oldu — bkz. git geçmişindeki ilgili commit).
+Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/n11/Shopify/Shopier/Etsy'yi
+ayırt eden 6 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan yok,
+"otomatik" seçilmiş bir SaaS-mor teması yok. O renkler de göz kararı seçilmedi:
+`dataviz` paletinin çift-çift-ayırt-edilebilirlik doğrulayıcısından geçirildi (gerçek
+marka renkleri denendiğinde Amazon/Trendyol/Etsy'nin üçü de turuncu ailesinde çıkıp
+`normal-vision ΔE 13.7` ile başarısız oldu — bkz. git geçmişindeki ilgili commit; n11/
+Shopier eklenirken de aynı doğrulayıcıdan geçirilip bronz/mürdüm tonlarında karar
+kılındı, çünkü altın/zeytin gibi doğal adaylar trendyol turuncusuyla CVD açısından
+ayırt edilemiyordu).
 
 Başlıklar ve büyük fiyat rakamları serif (Georgia), arayüz elemanları sans —
 tek bir marka rengi yerine bu tipografik kontrastla "tasarlanmış" hissi kuruluyor.
@@ -43,10 +49,18 @@ indikçe animasyon da devam ediyor. Üstteki sabit şerit kaydırınca sıkış�
 küçülüyor). `prefers-reduced-motion` açık olan kullanıcılarda tüm bu animasyonlar
 otomatik devre dışı kalıyor.
 
+Karanlık tema (header'daki ay/güneş ikonuyla açılıp kapanıyor, tercih
+`localStorage`'da kalıcı) kendi ayrı L/C basamaklarıyla `dataviz` doğrulayıcısından
+geçirildi — açık temanın renklerinin otomatik koyulaştırılmış hali değil, koyu
+yüzeye göre yeniden seçilmiş bir palet (bkz. aşağıdaki "Yeni pazaryerleri, ters mod
+ve arayüz güncellemeleri" bölümü). Üstteki sabit şerit (topbar/canlı-şerit/rozet)
+tema değişse de HER ZAMAN koyu kalacak şekilde ayrı, sabit CSS değişkenleriyle
+(`--chrome-bg` vb.) pimlendi — metin/yüzey rolleriyle aynı değişkenleri paylaşmıyor.
+
 ## Kayıtlı ürünler
 
 Özet şeridindeki yer imi (bookmark) ikonuyla o anki hesaplama — ürün adı, satış için
-öncelikli platform, isteğe bağlı bir görsel ve 4 platformun da hesaplanan fiyatlarıyla
+öncelikli platform, isteğe bağlı bir görsel ve 6 platformun da hesaplanan fiyatlarıyla
 birlikte — kaydedilebiliyor. Header'daki (sağ üst) ikinci yer imi ikonu kayıtlı
 ürünler panelini açıyor; buradan inceleyip silebilirsiniz.
 
@@ -70,11 +84,18 @@ firması seçiminde birbirinden çok farklı kısıtlara sahip olduğunu ortaya 
 - **Amazon (satıcı-gönderimli) ve Shopify:** Kargo firması seçimi serbest —
   soldaki "Kargo" bölümündeki genel piyasa tutarı doğrudan geçerli. (Amazon
   Lojistik/FBA ve Amazon Kolay Gönderi farklı ücretlendirir, kapsam dışı.)
-- **Trendyol:** Satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo listesiyle
-  sınırlı (serbest taşıyıcı seçimi yok — bkz. aşağıdaki kaynak güvenilirliği
-  bölümü). Soldaki genel tutar varsayılan/yön gösterici olarak kullanılıyor;
-  "Platforma özel ayarlar → Trendyol" içinde gerçek tutarınızı girebileceğiniz
-  opsiyonel bir "Kargo (₺)" alanı var.
+- **Trendyol ve n11:** Satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo
+  listesiyle sınırlı — serbest taşıyıcı seçimi yok (n11 için bu, n11'in kendi
+  resmi destek merkezi sayfasıyla doğrulandı; ilk uygulama turunda n11'in
+  serbest olduğu YANLIŞLIKLA varsayılmıştı, bkz.
+  `research/n11-shopier-gittigidiyor-arastirmasi.md`). Soldaki genel tutar
+  varsayılan/yön gösterici olarak kullanılıyor; "Platforma özel ayarlar →
+  Trendyol" ve "→ n11" içinde gerçek tutarınızı girebileceğiniz opsiyonel
+  birer "Kargo (₺)" alanı var.
+- **Shopier:** Anlaşmalı/indirimli kargo hizmeti Shopier'in kendi resmi
+  yardım merkezi sayfasına göre bir seçenek, zorunlu değil — bu yüzden
+  Amazon/Shopify gibi soldaki genel tutar doğrudan geçerli, ayrı bir override
+  alanı yok.
 - **Etsy:** Satışlar genelde yurt dışına gittiği için soldaki yurt içi tablo
   HİÇ uygulanmıyor — kavramsal olarak farklı bir maliyet sınıfı. Etsy'nin
   kendi "Kargo — yurt dışı gönderim (₺)" alanı var ("Platforma özel ayarlar →
@@ -171,6 +192,62 @@ Bu değişiklikler `node test.js` ve `scripts/verify_ui.py` ile doğrulandı (ye
 `tierAmbiguous` uyarısı, rozet rengi ve geniş-ekran konteyner genişliği için
 yeni otomatik kontroller eklendi).
 
+## Yeni pazaryerleri, ters mod ve arayüz güncellemeleri (10 Ağustos 2026)
+
+Kullanıcının "güncellik & görünüm", "hesaplama gücü" ve "başka hangi mağazalar
+var (Shopier, GittiGidiyor, n11)?" isteklerinin ardından yapılan üçüncü bir
+genişletme turu:
+
+- **n11 ve Shopier eklendi, GittiGidiyor araştırılıp EKLENMEDİ:** GittiGidiyor
+  2022'de aşamalı olarak kapanıp eBay bünyesine katıldı — aktif bir pazaryeri
+  değil (çoklu haber kaynağıyla doğrulandı, YÜKSEK güven). n11'in kategori
+  komisyonu + sabit "%1 pazarlama + %0,67 pazaryeri" hizmet bedeli, Shopier'in
+  komisyonu ve kargo modelleri eklendi — kaynaklar ve güven seviyeleri için
+  bkz. `research/n11-shopier-gittigidiyor-arastirmasi.md`.
+- **Aynı gün, dokümantasyon yazılırken yakalanan iki DÜZELTME:** n11'in kargo
+  firması seçiminin serbest olduğu ve Shopier'in komisyonunun sabit %2,99
+  olduğu, ilk uygulama turunda YANLIŞ varsayılmıştı. n11'in kendi resmi destek
+  sayfası kargo seçiminin ZORUNLU kapalı bir liste olduğunu (Trendyol'la aynı
+  desen), Shopier'in kendi ana sayfası da komisyonun "%2,99'DAN BAŞLAYAN"
+  (yani sadece yüksek hacimli satıcılar için geçerli taban oran) olduğunu
+  gösteriyor — standart/başlangıç oranı %4,99. İkisi de gerçek hesaplanan
+  fiyatı etkilediği için (sadece dokümantasyon değil) hem `calc.js` hem
+  testler düzeltildi; n11 için Trendyol'daki desenle aynı `n11KargoOverrideTRY`
+  alanı eklendi. Ayrıntı için araştırma dosyasındaki "Düzeltme notu" bölümüne
+  bakın.
+- **Ters mod (fiyattan kâra):** Üstteki "Maliyetten fiyat / Fiyattan kâr"
+  geçişiyle, elinizde zaten bir satış fiyatı varsa (ör. rakip fiyatı) o
+  fiyatın her platformda hangi kâr marjına denk geldiği hesaplanıyor
+  (`KH.computeAllFromPrice`). Dilimli Amazon kategorilerinde bile yakınsama
+  gerekmiyor — fiyat zaten bilindiği için doğru komisyon dilimi doğrudan
+  bulunuyor (ileri moddaki gibi bir "hangi dilim" arayışı yok).
+- **Birim kâr (₺) ve aylık hacim projeksiyonu:** Her sonuç kartında artık
+  yüzdenin yanında TL cinsinden birim kâr da gösteriliyor; opsiyonel "Aylık
+  tahmini satış adedi" alanı doldurulursa aylık toplam kâr projeksiyonu da
+  ekleniyor (sadece gösterim amaçlı, fiyatı etkilemez — Shopify'ın kendi
+  abonelik-bölme alanından bağımsız bir alan).
+- **Güncellik şeridi:** Sayfa başında kur/oran verisinin hangi tarihe ait
+  olduğunu gösteren bir şerit var; veri güncelse nötr, 30 günden eskiyse
+  (ör. uzun süre güncellenmeyen bir kopya) görsel olarak "bayat" işaretleniyor.
+- **Sektör arama:** "Sektör" açılır listesinin üstüne, yazarken en yakın
+  eşleşen sektöre atlayan (listeyi filtrelemeden — `scripts/verify_ui.py`
+  uyumluluğu için kasıtlı) bir arama kutusu eklendi; 31 sektör arasında elle
+  kaydırmak yerine "ayakkab" yazıp doğrudan atlanabiliyor.
+- **Karanlık tema:** Header'daki ay/güneş ikonuyla açılıp kapanıyor, tercih
+  `localStorage`'da kalıcı. Kendi ayrı L/C basamaklarıyla `dataviz`
+  doğrulayıcısından geçirilmiş bir palet (açık temanın otomatik koyulaştırılmış
+  hali değil) — bkz. yukarıdaki "Tasarım" bölümü.
+- **Bulunan ve düzeltilen ayrı bir görsel bug:** `#targetPriceFieldWrap`
+  (ters mod alanı) ileri modda `hidden` özniteliğine rağmen GÖRÜNÜR
+  render ediyordu — `class="field"` (`display:flex`) yazar-kökenli CSS'i,
+  `[hidden]`'ın tarayıcı-kökenli `display:none` varsayılanının HER ZAMAN
+  ezmesi yüzünden (özgüllükten bağımsız, CSS kademesinin temel bir kuralı).
+  Bunu otomatik Playwright kontrolleri (sadece `el.hidden` DOM özniteliğine
+  bakıyordu) YAKALAYAMADI — ekran görüntüsü incelemesiyle bulundu. Düzeltme:
+  global `[hidden] { display: none !important; }` kuralı eklendi, ilgili
+  testler artık hem `el.hidden` HEM `getComputedStyle(el).display` kontrol
+  ediyor.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -201,16 +278,26 @@ değiştirip kaydetmeniz yeterli:
 
 - `KH.FX` — USD/TRY, EUR/TRY anlık kur değeri ve tarihi (Shopify/Etsy TL çevirisinde kullanılıyor).
 - `KH.CARGO` — Her taşıyıcı için desi bazlı fiyat aralıkları (Aras Kargo kasıtlı olarak yok).
-  Bu tablo Amazon/Shopify/Trendyol-varsayılanı için ortak; Trendyol'un kendi override'ı ve
+  Bu tablo Amazon/Shopify/Shopier/n11/Trendyol-varsayılanı için ortak; Trendyol'un ve
+  n11'in kendi override'ları (`trendyolKargoOverrideTRY` / `n11KargoOverrideTRY`) ve
   Etsy'nin tamamen ayrı kargo alanı `computeAll()`'a doğrudan input olarak geçiliyor
   (bkz. "Kargo modeli" bölümü yukarıda).
-- `KH.SECTORS` — Sektör başına Amazon/Trendyol komisyon oranları (Amazon'da bazı
-  sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda).
+- `KH.SECTORS` — Sektör başına Amazon/Trendyol/n11 komisyon oranları (Amazon'da bazı
+  sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda; n11 alanı kasıtlı
+  olarak kısmi — bkz. "Kaynak güvenilirliği" bölümü aşağıda).
+- `KH.N11_HIZMET_BEDELI_PCT` — n11'in komisyondan ayrı, tüm kategorilerde sabit
+  "%1 pazarlama + %0,67 pazaryeri" hizmet bedeli (KDV dahil, n11'in resmi destek
+  sayfasıyla doğrulandı).
 - `KH.SHOPIFY_PLANS` — Plan başına aylık ücret + Shopify'ın "dış ödeme sağlayıcı"
   ek ücreti (Shopify Payments Türkiye'de yok, bkz. "Gider kalemleri" bölümü aşağıda).
 - `KH.SHOPIFY_GATEWAY_DEFAULT_PCT` — Kullanıcının kendi yerel ödeme sağlayıcısından
   (iyzico/PayTR/banka sanal POS vb.) bildirdiği varsayılan komisyon oranı.
 - `KH.TRENDYOL_HIZMET_BEDELI_TRY` — Trendyol'un komisyondan ayrı, sipariş başına sabit ücreti.
+- `KH.SHOPIER` — Sabit 0,49₺ işlem ücreti + komisyon oranı (`commissionPct`, varsayılan
+  %4,99 — Shopier'in kendi ana sayfasına göre bu SADECE standart/başlangıç oranı, aylık
+  satış hacmi arttıkça %2,99'a kadar düşen kademeli bir yapı var ama tam eşikler kaynaklar
+  arası tutarsız olduğu için modellenmedi; gerçek panel oranınızı arayüzdeki override
+  alanına girin).
 - `KH.ETSY` — İşlem/ilan/düzenleyici/ödeme işleme/para birimi çevrim oranları + Offsite Ads ücreti.
 
 Bir değeri değiştirdikten sonra `node test.js` çalıştırıp hâlâ "TÜM TESTLER GEÇTİ"
@@ -223,7 +310,7 @@ değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
 
 ## Kaynak güvenilirliği — önemli
 
-`research/` klasöründeki dört dosya, uygulamaya gömülü her oranın nereden geldiğini,
+`research/` klasöründeki beş dosya, uygulamaya gömülü her oranın nereden geldiğini,
 hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. Özetle:
 
 - **Amazon.com.tr:** Resmi kaynak (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026
@@ -265,6 +352,27 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
   tek bir "ortalama uluslararası kargo" rakamı hiçbir kaynakta bulunamadı (rakip bir
   Etsy kâr hesaplama aracı bile bu yüzden sabit bir tahmin kullanmıyor); bu alan
   kasıtlı olarak kullanıcı girişine bırakıldı.
+- **n11 (kategori komisyonu):** Amazon gibi tek/resmi bir oran sayfası yok; iki
+  bağımsız 2026 tarihli ikincil kaynaktan (Sentos, Paraşüt) derlenen YAKLAŞIK
+  değerler — ORTA güven, kapsam kasıtlı olarak kısmi (~8 sektör; kaynaklardan
+  biri bazı kategoriler için 2024'ten kalma veri kullandığını itiraf ediyor).
+  **n11 (hizmet bedeli + kargo):** n11'in kendi resmi destek merkezi sayfasıyla
+  doğrulandı — YÜKSEK güven. Kargo firması seçimi ZORUNLU kapalı bir liste
+  (Trendyol'la aynı model) — ilk uygulama turunda "serbest" YANLIŞLIKLA
+  varsayılmıştı, bu doğrulama sırasında düzeltildi (bkz.
+  `research/n11-shopier-gittigidiyor-arastirmasi.md`).
+- **Shopier (komisyon):** Kademeli bir yapı (Shopier'in kendi ana sayfası
+  "%2,99'DAN BAŞLAYAN" diyor) — ilk uygulama turunda YANLIŞLIKLA herkes için
+  sabit %2,99 sanılmıştı. Standart/başlangıç oranı (%4,99) iki bağımsız
+  kaynakla doğrulandı ama tam kademe eşikleri (hangi ciroda %2,99'a düşüldüğü)
+  kaynaklar arasında 100.000₺/ay ile 1,5 milyon₺/ay arasında ÇELİŞİYOR — bu
+  yüzden ORTA güven, panelinizdeki gerçek oranı override alanına girmeniz
+  önerilir. **Shopier (kargo):** Resmi kaynakla doğrulandı, anlaşmalı kargo
+  opsiyonel — YÜKSEK güven.
+- **GittiGidiyor:** Araştırıldı ama EKLENMEDİ — 2022'de aşamalı olarak kapandı,
+  eBay bünyesine katıldı, aktif bir pazaryeri değil. Çoklu ve birbirini
+  doğrulayan haber kaynağıyla teyit edildi (Webrazzi, NTV, Wikipedia) —
+  YÜKSEK güven.
 
 Uygulamanın kendisinde de "Kaynaklar & güven notları" bölümü (sayfanın altında,
 açılır panel) aynı uyarıları gösteriyor.
@@ -282,7 +390,12 @@ onay kutusuyla hesaba giriyor).
 node test.js                      # calc.js mantık testleri (tarayıcısız)
 python3 -m http.server 8080 &     # UI testi için önce siteyi yerelde servis edin
 python3 scripts/verify_ui.py      # Playwright ile gerçek tarayıcıda uçtan uca test
+python3 scripts/capture_screenshots.py   # (opsiyonel) gözle inceleme için ekran görüntüsü
 ```
+
+Otomatik testler DOM/computed-style seviyesinde doğru olsa bile gerçek bir görsel
+bug'ı kaçırabilir (bkz. yukarıdaki `[hidden]` bug'ı) — önemli bir CSS/görsel
+değişiklikten sonra ekran görüntülerini gözle de kontrol etmek önerilir.
 
 ## Yayınlama (GitHub / Vercel)
 

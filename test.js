@@ -189,5 +189,113 @@ var nearCeiling = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 81
 if (!nearCeiling.amazon.error) { console.log('FAIL: %100\'e çok yakın oran toplamında hata bekleniyordu, fiyat döndü:', nearCeiling.amazon.price); failures++; }
 else console.log('OK   %100\'e yakın (ama altında) oran toplamı da doğru şekilde reddediliyor');
 
+// --- 10 Ağustos 2026, 3. tur (n11/Shopier eklendi): n11 kategori komisyonu +
+// pazarlama/pazaryeri hizmet bedeli testi. `res`, dosyanın başındaki ana
+// testte zaten giyim/maliyet=100/kargo=50/hedefKâr=20 ile hesaplanmıştı. ---
+var n11Sector = KH.SECTORS.filter(function (s) { return s.id === 'giyim'; })[0];
+var n11Fixed = 100 + 50 + 0;
+var n11PctTotal = (n11Sector.n11 + KH.N11_HIZMET_BEDELI_PCT + 20) / 100;
+console.log('\n--- n11, giyim, maliyet=100, kargo=50, hedefKâr=20% ---');
+console.log('n11:', res.n11.price, 'kullanılan %', res.n11.usedPct);
+check('n11 fiyat (elle, kategori komisyonu + hizmet bedeli)', res.n11.price, n11Fixed / (1 - n11PctTotal), 0.5);
+
+// n11 verisi olmayan bir sektörde (ör. "saat") unavailable dönmeli — override
+// alanı her zaman kullanılabilir olduğu için bu bir hata değil, kasıtlı
+// kısmi kapsam (bkz. calc.js başındaki YENİ PAZARYERLERİ yorumu).
+var n11NoData = KH.computeAll({ costTRY: 100, sectorId: 'saat', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+console.log('n11 (saat, veri yok):', n11NoData.n11.unavailable ? n11NoData.n11.reason : n11NoData.n11.price);
+if (!n11NoData.n11.unavailable) { console.log('FAIL: n11 icin "unavailable" bekleniyordu (saat sektöründe veri yok)'); failures++; }
+else console.log('OK   n11 veri-yok sektöründe doğru şekilde "unavailable" döndü');
+
+// override her zaman kazanmalı, veri olsun olmasın
+var n11Override = KH.computeAll({ costTRY: 100, sectorId: 'saat', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11OverridePct: 15 });
+var n11OverridePctTotal = (15 + KH.N11_HIZMET_BEDELI_PCT + 20) / 100;
+check('n11OverridePct veri olmayan sektörde de kullanılıyor', n11Override.n11.price, n11Fixed / (1 - n11OverridePctTotal), 0.5);
+
+// --- n11KargoOverrideTRY: n11'in kargo firması seçimi ZORUNLU kapalı bir
+// liste (Trendyol'la aynı desen) — dokümantasyon yazılırken n11'in kendi
+// resmi destek sayfasıyla doğrulanıp düzeltildi (ilk sürümde "serbest"
+// sanılmıştı, bkz. calc.js başı 3. tur notu). Girilirse paylaşılan kargoTRY
+// yerine kullanılmalı; Amazon gibi izole platformları ETKİLEMEMELİ. ---
+var n11KargoBase = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+var n11KargoOverridden = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11KargoOverrideTRY: 200 });
+if (n11KargoBase.n11.price === n11KargoOverridden.n11.price) { console.log('FAIL: n11KargoOverrideTRY fiyatı değiştirmedi'); failures++; }
+else console.log('OK   n11KargoOverrideTRY girilince n11 fiyatı değişiyor');
+check('n11KargoOverrideTRY paylaşılan kargoTRY yerine kullanılıyor (elle: kargo=200)',
+      n11KargoOverridden.n11.price, (100 + 200 + 0) / (1 - n11PctTotal), 0.5);
+if (n11KargoBase.amazon.price !== n11KargoOverridden.amazon.price) { console.log('FAIL: n11KargoOverrideTRY Amazon fiyatını etkilememeli (platform bazlı izolasyon)'); failures++; }
+else console.log('OK   n11KargoOverrideTRY Amazon fiyatını etkilemiyor (platform bazlı izolasyon)');
+var negN11KargoOverride = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11KargoOverrideTRY: -5000 });
+check('Negatif n11KargoOverrideTRY 0\'a kırpılıyor (eksi kargo maliyeti üretmiyor)',
+      negN11KargoOverride.n11.price, KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11KargoOverrideTRY: 0 }).n11.price, 0.01);
+
+// --- Shopier kademeli oran testi (10 Ağustos 2026, dokümantasyon yazılırken
+// düzeltildi: Shopier'in kendi ana sayfası "%2,99'dan BAŞLAYAN" diyor — bu
+// sadece yüksek hacimli satıcılar için geçerli en iyi oran, ilk sürümde
+// yanlışlıkla HERKES için sabit %2,99 sanılmıştı. Standart/başlangıç oranı
+// iki bağımsız kaynakla doğrulanan %4,99 — bkz. calc.js başı 3. tur notu ve
+// research/n11-shopier-gittigidiyor-arastirmasi.md). ---
+check('SHOPIER.commissionPct standart/muhafazakâr oran (%4,99) — en-iyi-durum (%2,99) DEĞİL',
+      KH.SHOPIER.commissionPct, 4.99, 0.001);
+var shopierFixed = 100 + 50 + 0 + KH.SHOPIER.fixedTRY;
+var shopierPctTotal = (KH.SHOPIER.commissionPct + 20) / 100;
+console.log('\n--- Shopier, giyim, maliyet=100, kargo=50, hedefKâr=20% ---');
+console.log('Shopier:', res.shopier.price, 'kullanılan %', res.shopier.usedPct);
+check('Shopier fiyat (elle, kademeli oranın standart basamağı + sabit ücret)', res.shopier.price, shopierFixed / (1 - shopierPctTotal), 0.5);
+
+// --- birimKarTRY: her platformun "Hedef kâr" breakdown satırıyla AYNI
+// olmalı (yeni bir hesap değil, var olan bir satırın yeniden adlandırılması). ---
+var amazonKarSatiri = res.amazon.breakdown.filter(function (b) { return b.label === 'Hedef kâr'; })[0];
+check('birimKarTRY, Amazon "Hedef kâr" breakdown satırına eşit', res.amazon.birimKarTRY, amazonKarSatiri.amount, 0.001);
+check('birimKarTRY = fiyat × hedefKâr%', res.amazon.birimKarTRY, res.amazon.price * 20 / 100, 0.01);
+if (res.amazon.monthlyProfitTRY != null) { console.log('FAIL: monthlyUnits verilmediyse monthlyProfitTRY da olmamalı'); failures++; }
+
+// --- monthlyProfitTRY: sadece monthlyUnits > 0 verilince hesaplanmalı ---
+var withMonthly = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', monthlyUnits: 30 });
+check('monthlyProfitTRY = birimKarTRY × aylık adet', withMonthly.amazon.monthlyProfitTRY, withMonthly.amazon.birimKarTRY * 30, 0.01);
+
+// --- Ters mod (fiyattan kâr) round-trip testi: ileri modda çözülen fiyat
+// ters moda geri verilince AYNI hedef kâr marjını üretmeli — çünkü fiyat
+// zaten o marjı üretecek şekilde çözülmüştü. Her platform kendi fiyatıyla
+// test ediliyor (platformlar farklı gider yapıları yüzünden farklı fiyatlara
+// çözülür; birinin fiyatını başka birine vermek marjı DEĞİŞTİRİR, bu yüzden
+// round-trip her zaman "kendi fiyatı -> kendi marjı" şeklinde olmalı). ---
+console.log('\n--- Ters mod round-trip: ileri modun çözdüğü fiyat, ters moda verilince aynı hedef kâr marjını vermeli ---');
+['amazon', 'trendyol', 'n11', 'shopify', 'shopier', 'etsy'].forEach(function (key) {
+  var fwd = res[key];
+  if (!fwd || fwd.unavailable || fwd.error) { console.log('atlandı (veri yok):', key); return; }
+  var rev = KH.computeAllFromPrice(input, fwd.price);
+  check('Round-trip ' + key + ': ters mod marjı ileri mod hedefine (%20) eşit', rev[key].marginPct, input.marginPct, 0.001);
+});
+
+// Dilimli (tiered) Amazon kategorisinde de round-trip GEÇMELİ — ters modda
+// yakınsama gerekmiyor (fiyat zaten bilindiği için dilim doğrudan
+// resolveRate() ile bulunuyor), bu yüzden hem düşük hem yüksek dilimde ayrı
+// ayrı doğrulanıyor.
+var lowJewelryInput = { costTRY: 500, sectorId: 'taki', marginPct: 10, kargoTRY: 0, reklamTRY: 0, shopifyPlanId: 'basic' };
+var lowJewelryRev = KH.computeAllFromPrice(lowJewelryInput, lowJewelry.amazon.price);
+check('Round-trip dilimli Amazon (taki, düşük değer/%20 dilim)', lowJewelryRev.amazon.marginPct, 10, 0.001);
+check('Round-trip dilimli Amazon düşük dilim, doğru oranı buluyor (%20)', lowJewelryRev.amazon.usedPct, 20, 0.001);
+
+var highJewelryInput = { costTRY: 2000, sectorId: 'taki', marginPct: 10, kargoTRY: 0, reklamTRY: 0, shopifyPlanId: 'basic' };
+var highJewelryRev = KH.computeAllFromPrice(highJewelryInput, highJewelry.amazon.price);
+check('Round-trip dilimli Amazon (taki, yüksek değer/%6 dilim)', highJewelryRev.amazon.marginPct, 10, 0.001);
+check('Round-trip dilimli Amazon yüksek dilim, doğru oranı buluyor (%6)', highJewelryRev.amazon.usedPct, 6, 0.001);
+
+// --- Ters mod uç durumları: zarar senaryosu (satış fiyatı maliyetin çok
+// altında) çökmemeli, negatif marj üretmeli; negatif fiyat girdisi 0'a
+// kırpılmalı (negatif girdi savunması burada da geçerli). ---
+var lossRev = KH.computeAllFromPrice({ costTRY: 1000, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' }, 100);
+console.log('\n--- Ters mod zarar senaryosu: maliyet=1000₺, satış fiyatı=100₺ ---');
+console.log('Amazon marjPct:', lossRev.amazon.marginPct, 'kârTRY:', lossRev.amazon.profitTRY);
+if (!(lossRev.amazon.marginPct < 0 && lossRev.amazon.profitTRY < 0)) {
+  console.log('FAIL: zarar senaryosunda negatif marj/kâr bekleniyordu'); failures++;
+} else {
+  console.log('OK   Zarar senaryosu negatif marj/kâr üretiyor (çökmedi, sessizce yanlış pozitif değer de vermedi)');
+}
+
+var negPriceRev = KH.computeAllFromPrice({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' }, -500);
+check('Ters modda negatif fiyat girdisi 0\'a kırpılıyor', negPriceRev.amazon.priceTRY, 0, 0.001);
+
 console.log('\n' + (failures === 0 ? 'TÜM TESTLER GEÇTİ' : failures + ' TEST BAŞARISIZ'));
 process.exit(failures === 0 ? 0 : 1);

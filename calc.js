@@ -58,6 +58,49 @@
  *     (satışları ağırlıkla yurt dışına, farklı bir tüketici-hukuku kapsamına
  *     giriyor). İkisi de varsayılan 0 — güvenilir tek bir "tipik" iade oranı
  *     bulunamadı (kaynaklar %18-%70 arası, kategoriye göre çok değişken).
+ *
+ * YENİ PAZARYERLERİ — 3. TUR (10 Ağustos 2026, kullanıcı isteğiyle araştırıldı;
+ * n11'in kargo modeli ve Shopier'in oranı AYNI GÜN, research/ dosyası
+ * yazılırken yapılan ikinci/taze bir kaynak turunda DÜZELTİLDİ — ilk sürümün
+ * ikisi de hatalıydı, bkz. ilgili maddeler ve
+ * research/n11-shopier-gittigidiyor-arastirmasi.md):
+ *   - n11 eklendi: kategori bazlı komisyon (KDV dahil, 3 bağımsız ikincil
+ *     kaynaktan derlendi — Amazon gibi resmi/tek bir oran sayfası yok) +
+ *     komisyondan AYRI, TÜM kategorilerde sabit "%1 pazarlama + %0,67
+ *     pazaryeri" hizmet bedeli (`N11_HIZMET_BEDELI_PCT`, n11'in kendi resmi
+ *     destek merkezi sayfasıyla doğrulandı). Kategori kapsamı KASITLI OLARAK
+ *     KISMİ — sadece 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik
+ *     olduğu ~8 sektör dolduruldu, geri kalanı Trendyol'daki `null` (veri yok)
+ *     deseniyle aynı şekilde boş bırakıldı; override alanı her zaman
+ *     kullanılabilir. Kargo: n11'in kendi resmi destek merkezi sayfası açıkça
+ *     "satıcı kendi bağımsız kargo anlaşmasını kullanamaz, yalnızca n11'in
+ *     listelediği firmalar arasından seçim yapabilir ve bu zorunludur" diyor
+ *     (İLK SÜRÜMDEKİ "taşıyıcı seçimi serbest" varsayımı YANLIŞTI) — yani
+ *     Trendyol'daki gibi KAPALI bir anlaşmalı liste. Bu yüzden Trendyol'la
+ *     aynı desen uygulandı: paylaşılan `kargoTRY` varsayılan/yön gösterici
+ *     olarak kullanılıyor ama `n11KargoOverrideTRY` girilirse ona öncelik
+ *     veriliyor.
+ *   - Shopier eklendi: SABİT DEĞİL, aylık satış hacmine göre KADEMELİ bir oran
+ *     (İLK SÜRÜMDE yanlışlıkla sabit %2,99 olarak modellenmişti). Shopier'in
+ *     kendi ana sayfası "%2,99 + 0,49 TL'DEN BAŞLAYAN oranlarda" diyor —
+ *     "başlayan" ifadesi %2,99'un sadece yüksek aylık hacme ulaşan satıcılar
+ *     için geçerli EN İYİ/taban oran olduğunu, herkes için geçerli sabit bir
+ *     oran olmadığını gösteriyor. İki bağımsız güncel ikincil kaynak (Nisan
+ *     2026 ve Haziran 2026 güncellemeli) kademeli yapıyı ve yeni/düşük
+ *     hacimli satıcılar için STANDART başlangıç oranının %4,99 + 0,49₺
+ *     olduğunu aynı rakamla doğruluyor. Kaynaklar tam eşik değerlerinde
+ *     (%2,99'a hangi aylık ciroda ulaşılır) ANLAŞMIYOR — biri ~100.000₺/ay,
+ *     biri 1,5 milyon₺/ay üzerini işaret ediyor — bu yüzden tam kademe
+ *     tablosu modellenmedi; STANDART/muhafazakâr oran (`%4,99`) varsayılan
+ *     (`SHOPIER.commissionPct`), yüksek hacimli satıcılar gerçek panel
+ *     oranlarını `shopierOverridePct` alanına girmeli. Aylık üyelik/liste
+ *     ücreti yok — sadece satış üzerinden kesinti. Kargo: Shopier'in
+ *     anlaşmalı kargo hizmeti OPSİYONEL (zorunlu değil, kendi resmi yardım
+ *     merkezi sayfasıyla doğrulandı), bu yüzden paylaşılan `kargoTRY`
+ *     doğrudan kullanılıyor.
+ *   - GittiGidiyor ARAŞTIRILDI ama EKLENMEDİ: platform 2022'de kapandı, eBay
+ *     bünyesine katıldı (Temmuz 2022 itibarıyla tamamen kapalı) — aktif bir
+ *     pazaryeri değil, bkz. research.
  */
 
 (function (root) {
@@ -174,41 +217,44 @@
     return best;
   }
 
-  // --- SEKTÖR / KOMİSYON TABLOSU (Amazon resmi + Trendyol yaklaşık) ---
+  // --- SEKTÖR / KOMİSYON TABLOSU (Amazon resmi + Trendyol/n11 yaklaşık) ---
   // amazon: sayı (düz %) veya {tiers:[[üstSınır,%], ..., [Infinity,%]]}
-  // trendyol: sayı (yaklaşık nokta tahmini) veya null (veri yok)
+  // trendyol / n11: sayı (yaklaşık nokta tahmini) veya null (veri yok)
+  // n11 kapsamı KASITLI OLARAK KISMİ (bkz. dosya başı 3. tur notu) — sadece
+  // 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik olduğu sektörler
+  // dolduruldu; override alanı her zaman kullanılabilir.
   var SECTORS = [
-    { id: 'giyim', label: 'Giyim', amazon: 15.5, trendyol: 21.4 },
-    { id: 'ayakkabi', label: 'Ayakkabı', amazon: 17, trendyol: 23 },
-    { id: 'canta', label: 'Çanta, Bavul, Seyahat', amazon: 16, trendyol: 21.4 },
-    { id: 'taki', label: 'Takı, Mücevher, Bijuteri', amazon: { tiers: [[900, 20], [Infinity, 6]] }, trendyol: 22.25 },
-    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null },
-    { id: 'telefon', label: 'Cep Telefonu', amazon: 8, trendyol: 6 },
-    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null },
-    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null },
-    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5 },
-    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10 },
-    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null },
-    { id: 'mutfak', label: 'Mutfak & Dekorasyon', amazon: 15, trendyol: 19.32 },
-    { id: 'mobilya', label: 'Mobilya, Ev Tekstili', amazon: 14.5, trendyol: 21 },
-    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16 },
-    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75 },
-    { id: 'kozmetik', label: 'Kozmetik, Parfüm', amazon: { tiers: [[500, 9], [Infinity, 14]] }, trendyol: 18.5 },
-    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null },
-    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null },
-    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5 },
-    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25 },
-    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null },
-    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5 },
-    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5 },
-    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5 },
-    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null },
-    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null },
-    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null },
-    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6 },
-    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26 },
-    { id: 'hediyeKarti', label: 'Dijital Hediye Kartı', amazon: null, trendyol: 5 },
-    { id: 'diger', label: 'Diğer', amazon: 10, trendyol: null }
+    { id: 'giyim', label: 'Giyim', amazon: 15.5, trendyol: 21.4, n11: 20.34 },
+    { id: 'ayakkabi', label: 'Ayakkabı', amazon: 17, trendyol: 23, n11: 18.5 },
+    { id: 'canta', label: 'Çanta, Bavul, Seyahat', amazon: 16, trendyol: 21.4, n11: 18 },
+    { id: 'taki', label: 'Takı, Mücevher, Bijuteri', amazon: { tiers: [[900, 20], [Infinity, 6]] }, trendyol: 22.25, n11: 21 },
+    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null, n11: null },
+    { id: 'telefon', label: 'Cep Telefonu', amazon: 8, trendyol: 6, n11: 6 },
+    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null, n11: null },
+    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null, n11: null },
+    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5, n11: null },
+    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10, n11: null },
+    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null, n11: null },
+    { id: 'mutfak', label: 'Mutfak & Dekorasyon', amazon: 15, trendyol: 19.32, n11: 20 },
+    { id: 'mobilya', label: 'Mobilya, Ev Tekstili', amazon: 14.5, trendyol: 21, n11: 19 },
+    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16, n11: null },
+    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75, n11: null },
+    { id: 'kozmetik', label: 'Kozmetik, Parfüm', amazon: { tiers: [[500, 9], [Infinity, 14]] }, trendyol: 18.5, n11: 16 },
+    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null, n11: null },
+    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null, n11: null },
+    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5, n11: null },
+    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25, n11: null },
+    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null, n11: null },
+    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5, n11: null },
+    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5, n11: null },
+    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5, n11: null },
+    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null, n11: null },
+    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null, n11: null },
+    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null, n11: null },
+    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6, n11: null },
+    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26, n11: null },
+    { id: 'hediyeKarti', label: 'Dijital Hediye Kartı', amazon: null, trendyol: 5, n11: null },
+    { id: 'diger', label: 'Diğer', amazon: 10, trendyol: null, n11: null }
   ];
 
   function resolveRate(rate, priceTRY) {
@@ -245,6 +291,32 @@
   // diğerleri 10,99₺+KDV — bkz. research). Muhafazakâr/varsayılan olarak
   // yüksek kademe kullanılıyor; index.html'de düzenlenebilir.
   var TRENDYOL_HIZMET_BEDELI_TRY = round2(10.99 * 1.20);
+
+  // n11'de komisyondan AYRI, TÜM kategorilerde sabit oranlı iki hizmet bedeli:
+  // %1 (+KDV) "pazarlama hizmet bedeli" + %0,67 (+KDV) "pazaryeri hizmet
+  // bedeli" — n11'in kendi resmi destek merkezi sayfasıyla VE iki bağımsız
+  // ikincil kaynakla doğrulandı (10 Ağustos 2026, bkz. research). Komisyon
+  // tablosu gibi bu da KDV dahil kabul edildi. n11 ayrıca satıcılardan %1
+  // stopaj (vergi) kesiyor ama bu KASITLI OLARAK modellenmedi — stopaj bir
+  // gider değil, satıcının yıl sonu gelir vergisi borcundan MAHSUP EDİLEN
+  // (düşülen) bir vergi avansı; komisyon gibi kâr marjını kalıcı olarak
+  // azaltmıyor, bu yüzden burada bir "maliyet" olarak sayılması yanlış olur.
+  var N11_HIZMET_BEDELI_PCT = round2((1 + 0.67) * 1.20);
+
+  // --- SHOPIER ---
+  // SABİT oran DEĞİL — aylık satış hacmine göre KADEMELİ (bkz. dosya başı
+  // 3. tur notundaki düzeltme). Shopier'in kendi ana sayfası "%2,99 + 0,49
+  // TL'den BAŞLAYAN" diyor — %2,99 sadece yüksek hacimli satıcılar için
+  // geçerli EN İYİ oran. STANDART/başlangıç oranı (yeni ve düşük hacimli
+  // satıcılar için) iki bağımsız güncel kaynakta aynı rakam: %4,99 + 0,49₺
+  // (yurt içi, 10 Ağustos 2026, bkz. research). Bu yüzden varsayılan olarak
+  // %4,99 kullanılıyor — gerçek panel oranınızı (aylık cironuza göre
+  // değişir) shopierOverridePct alanına girin. Sabit 0,49₺ işlem ücreti tüm
+  // kaynaklarda aynı. Aylık üyelik/liste ücreti yok.
+  var SHOPIER = {
+    commissionPct: 4.99,
+    fixedTRY: 0.49
+  };
 
   // --- ETSY (resmi sayfa çekilemedi; çoklu 2026 kaynağı ile derlendi) ---
   var ETSY = {
@@ -309,7 +381,8 @@
     'costTRY', 'marginPct', 'kargoTRY', 'reklamTRY', 'iadeOraniPct', 'iadeMaliyetTRY',
     'amazonOverridePct', 'trendyolOverridePct', 'trendyolKargoOverrideTRY',
     'trendyolHizmetBedeliTRY', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY',
-    'shopifyMonthlyUnits', 'etsyKargoTRY', 'etsyPaymentPct'
+    'shopifyMonthlyUnits', 'etsyKargoTRY', 'etsyPaymentPct',
+    'n11OverridePct', 'shopierOverridePct', 'monthlyUnits', 'n11KargoOverrideTRY'
   ];
   function sanitizeInput(raw) {
     var out = {};
@@ -323,11 +396,14 @@
   function computeAll(rawInput) {
     // input: { costTRY, sectorId, marginPct, kargoTRY, reklamTRY, shopifyPlanId,
     //   etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct,
-    //   amazonOverridePct, trendyolKargoOverrideTRY, etsyKargoTRY,
+    //   amazonOverridePct, trendyolKargoOverrideTRY, n11KargoOverrideTRY, etsyKargoTRY,
     //   trendyolHizmetBedeliTRY, shopifyGatewayPct, shopifyGatewayFixedTRY,
     //   iadeOraniPct, iadeMaliyetTRY }
-    // kargoTRY: Amazon (satıcı-gönderimli) + Shopify + Trendyol'un varsayılanı.
-    // trendyolKargoOverrideTRY: verilirse Trendyol için kargoTRY yerine kullanılır.
+    // kargoTRY: Amazon (satıcı-gönderimli) + Shopify + n11 + Trendyol'un varsayılanı.
+    // trendyolKargoOverrideTRY / n11KargoOverrideTRY: verilirse ilgili platform
+    // için kargoTRY yerine kullanılır — ikisi de KAPALI anlaşmalı kargo listesi
+    // kullandığından (bkz. dosya başı 3. tur notu) paylaşılan genel tutar sadece
+    // yön gösterici, gerçek panel tutarı bu alanlara girilebilir.
     // etsyKargoTRY: Etsy'ye özel, kargoTRY'den bağımsız (bkz. dosya başındaki not).
     // iadeOraniPct/iadeMaliyetTRY: Amazon/Trendyol/Shopify'a uygulanan beklenen
     // iade maliyeti (oran% × maliyet); Etsy'ye UYGULANMAZ (bkz. dosya başı notu).
@@ -434,6 +510,30 @@
       results.trendyol = r;
     })();
 
+    // --- N11 ---
+    (function () {
+      var pct = input.n11OverridePct != null ? input.n11OverridePct : (sector ? sector.n11 : null);
+      if (pct == null) {
+        results.n11 = { unavailable: true, reason: 'Bu sektör için n11 oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
+        return;
+      }
+      // n11'in kendi resmi destek merkezi sayfası: satıcı kendi bağımsız
+      // kargo anlaşmasını KULLANAMAZ, yalnızca n11'in listelediği (kapalı)
+      // firmalar arasından seçim yapabilir ve bu ZORUNLUDUR — Trendyol'la
+      // aynı desen (bkz. dosya başı 3. tur notundaki düzeltme). Paylaşılan
+      // kargoTRY yön gösterici varsayılan olarak kullanılıyor,
+      // n11KargoOverrideTRY girilirse ona öncelik veriliyor.
+      var n11Kargo = input.n11KargoOverrideTRY != null ? input.n11KargoOverrideTRY : input.kargoTRY;
+      var fixed = input.costTRY + n11Kargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
+      var r = solvePrice(fixed, [
+        { label: 'Komisyon (yaklaşık)', pct: pct },
+        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: N11_HIZMET_BEDELI_PCT },
+        { label: 'Hedef kâr', pct: input.marginPct }
+      ]);
+      r.usedPct = pct;
+      results.n11 = r;
+    })();
+
     // --- SHOPIFY ---
     (function () {
       var plan = SHOPIFY_PLANS.filter(function (p) { return p.id === input.shopifyPlanId; })[0] || SHOPIFY_PLANS[0];
@@ -455,6 +555,20 @@
       r.monthlySubTRY = monthlySubTRY;
       r.plan = plan;
       results.shopify = r;
+    })();
+
+    // --- SHOPIER ---
+    (function () {
+      // Anlaşmalı kargo hizmeti opsiyonel (bkz. dosya başı notu) — paylaşılan
+      // kargoTRY doğrudan kullanılıyor. Shopify'ın aksine aylık abonelik yok.
+      var pct = input.shopierOverridePct != null ? input.shopierOverridePct : SHOPIER.commissionPct;
+      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + SHOPIER.fixedTRY + iadeBeklenenMaliyetTRY;
+      var r = solvePrice(fixed, [
+        { label: 'Komisyon', pct: pct },
+        { label: 'Hedef kâr', pct: input.marginPct }
+      ]);
+      r.usedPct = pct;
+      results.shopier = r;
     })();
 
     // --- ETSY ---
@@ -480,6 +594,149 @@
       results.etsy = r;
     })();
 
+    // --- BİRİM KÂR (₺) + AYLIK HACİM PROJEKSİYONU ---
+    // "Hedef kâr" yüzdesi zaten her platformun breakdown'ında bir satır olarak
+    // duruyordu (price * marginPct/100) — burada sadece bunu her sonuca
+    // `birimKarTRY` olarak yüzeye çıkarıyoruz (ayrı bir hesap değil, var olanı
+    // isimlendirip kolay erişilir kılıyoruz). `monthlyUnits` girilmişse (tüm
+    // platformlar için ortak, opsiyonel bir alan — Shopify'a özel
+    // `shopifyMonthlyUnits`'ten BAĞIMSIZ, o sadece Shopify'ın aylık abonelik
+    // payını bölüyordu) aylık toplam kâr projeksiyonu da ekleniyor. İkisi de
+    // SADECE GÖSTERİM içindir, fiyatı etkilemez.
+    Object.keys(results).forEach(function (key) {
+      var r = results[key];
+      if (!r || r.unavailable || r.error || !r.breakdown) return;
+      var karSatiri = r.breakdown.filter(function (b) { return b.label === 'Hedef kâr'; })[0];
+      if (!karSatiri) return;
+      r.birimKarTRY = karSatiri.amount;
+      if (input.monthlyUnits && input.monthlyUnits > 0) {
+        r.monthlyProfitTRY = karSatiri.amount * input.monthlyUnits;
+      }
+    });
+
+    return results;
+  }
+
+  // --- TERS MOD: satış fiyatından hedef kâr oranını bulma ---
+  // computeAll() maliyet+hedef kâr'dan fiyatı ÇÖZER; bu fonksiyon tam tersini
+  // yapar — bilinen bir satış fiyatından (ör. rakip fiyatı, elle belirlenmiş
+  // bir fiyat) o fiyatın hangi kâr marjına denk geldiğini hesaplar. Fiyat
+  // ZATEN BİLİNDİĞİ için (computeAll'daki gibi P'ye bağlı bir komisyon dilimi
+  // arayışı yok) dilimli Amazon kategorilerinde bile YAKINSAMA GEREKMEZ —
+  // dilim doğrudan resolveRate(sector.amazon, priceTRY) ile bulunur.
+  function marginFromPrice(fixedTRY, otherPcts, priceTRY) {
+    fixedTRY = Math.max(0, fixedTRY || 0);
+    priceTRY = Math.max(0, priceTRY || 0);
+    otherPcts = otherPcts.map(function (p) {
+      return { label: p.label, pct: Math.max(0, p.pct || 0) };
+    });
+    var otherTotal = otherPcts.reduce(function (sum, p) { return sum + p.pct; }, 0);
+    var breakdown = otherPcts.map(function (p) {
+      return { label: p.label, amount: priceTRY * (p.pct / 100) };
+    });
+    var otherAmountTRY = breakdown.reduce(function (sum, b) { return sum + b.amount; }, 0);
+    var profitTRY = priceTRY - fixedTRY - otherAmountTRY;
+    var marginPct = priceTRY > 0 ? (profitTRY / priceTRY) * 100 : 0;
+    return { priceTRY: priceTRY, marginPct: marginPct, profitTRY: profitTRY, breakdown: breakdown, fixedTRY: fixedTRY };
+  }
+
+  function computeAllFromPrice(rawInput, priceTRY) {
+    var input = sanitizeInput(rawInput);
+    var sector = SECTORS.filter(function (s) { return s.id === input.sectorId; })[0];
+    var results = {};
+    var iadeBeklenenMaliyetTRY = ((input.iadeOraniPct || 0) / 100) * (input.iadeMaliyetTRY || 0);
+
+    (function () { // Amazon
+      if (!sector || sector.amazon == null) {
+        results.amazon = { unavailable: true, reason: 'Bu sektör için Amazon oranı bulunamadı.' };
+        return;
+      }
+      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + iadeBeklenenMaliyetTRY;
+      var flatPct = input.amazonOverridePct != null ? input.amazonOverridePct
+        : (typeof sector.amazon === 'number' ? sector.amazon : resolveRate(sector.amazon, priceTRY));
+      var r = marginFromPrice(fixed, [{ label: 'Komisyon (+KDV)', pct: flatPct * 1.20 }], priceTRY);
+      r.usedPct = flatPct;
+      results.amazon = r;
+    })();
+
+    (function () { // Trendyol
+      var pct = input.trendyolOverridePct != null ? input.trendyolOverridePct : (sector ? sector.trendyol : null);
+      if (pct == null) {
+        results.trendyol = { unavailable: true, reason: 'Bu sektör için Trendyol oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
+        return;
+      }
+      var trendyolKargo = input.trendyolKargoOverrideTRY != null ? input.trendyolKargoOverrideTRY : input.kargoTRY;
+      var hizmetBedeli = input.trendyolHizmetBedeliTRY != null ? input.trendyolHizmetBedeliTRY : TRENDYOL_HIZMET_BEDELI_TRY;
+      var fixed = input.costTRY + trendyolKargo + input.reklamTRY + hizmetBedeli + iadeBeklenenMaliyetTRY;
+      var r = marginFromPrice(fixed, [{ label: 'Komisyon (yaklaşık)', pct: pct }], priceTRY);
+      r.usedPct = pct;
+      results.trendyol = r;
+    })();
+
+    (function () { // n11
+      var pct = input.n11OverridePct != null ? input.n11OverridePct : (sector ? sector.n11 : null);
+      if (pct == null) {
+        results.n11 = { unavailable: true, reason: 'Bu sektör için n11 oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
+        return;
+      }
+      // bkz. computeAll()'daki n11 kargo yorumu — kapalı anlaşmalı liste,
+      // override girilirse ona öncelik verilir.
+      var n11Kargo = input.n11KargoOverrideTRY != null ? input.n11KargoOverrideTRY : input.kargoTRY;
+      var fixed = input.costTRY + n11Kargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
+      var r = marginFromPrice(fixed, [
+        { label: 'Komisyon (yaklaşık)', pct: pct },
+        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: N11_HIZMET_BEDELI_PCT }
+      ], priceTRY);
+      r.usedPct = pct;
+      results.n11 = r;
+    })();
+
+    (function () { // Shopify
+      var plan = SHOPIFY_PLANS.filter(function (p) { return p.id === input.shopifyPlanId; })[0] || SHOPIFY_PLANS[0];
+      var gatewayPct = input.shopifyGatewayPct != null ? input.shopifyGatewayPct : SHOPIFY_GATEWAY_DEFAULT_PCT;
+      var gatewayFixedTRY = input.shopifyGatewayFixedTRY || 0;
+      var monthlySubTRY = 0;
+      if (input.shopifyMonthlyUnits && input.shopifyMonthlyUnits > 0) {
+        monthlySubTRY = (plan.monthlyUSD * FX.USD_TRY) / input.shopifyMonthlyUnits;
+      }
+      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + gatewayFixedTRY + monthlySubTRY + iadeBeklenenMaliyetTRY;
+      var r = marginFromPrice(fixed, [
+        { label: 'Ödeme sağlayıcı komisyonu', pct: gatewayPct },
+        { label: 'Shopify dış sağlayıcı ek ücreti', pct: plan.externalSurchargePct }
+      ], priceTRY);
+      r.usedPct = round2(gatewayPct + plan.externalSurchargePct);
+      r.monthlySubTRY = monthlySubTRY;
+      r.plan = plan;
+      results.shopify = r;
+    })();
+
+    (function () { // Shopier
+      var pct = input.shopierOverridePct != null ? input.shopierOverridePct : SHOPIER.commissionPct;
+      var fixed = input.costTRY + input.kargoTRY + input.reklamTRY + SHOPIER.fixedTRY + iadeBeklenenMaliyetTRY;
+      var r = marginFromPrice(fixed, [{ label: 'Komisyon', pct: pct }], priceTRY);
+      r.usedPct = pct;
+      results.shopier = r;
+    })();
+
+    (function () { // Etsy
+      var paymentPct = input.etsyPaymentPct != null ? input.etsyPaymentPct : ETSY.defaultPaymentProcessingPct;
+      var listingFeeTRY = ETSY.listingFeeUSD * FX.USD_TRY;
+      var pcts = [
+        { label: 'İşlem komisyonu', pct: ETSY.transactionPct },
+        { label: 'Ödeme işleme (tahmini)', pct: paymentPct },
+        { label: 'Düzenleyici işletim ücreti (TR)', pct: ETSY.regulatoryOperatingFeePct },
+        { label: 'Para birimi çevrim ücreti', pct: ETSY.currencyConversionPct }
+      ];
+      if (input.etsyOffsiteAds) {
+        var adsPct = input.etsyOverThreshold ? ETSY.offsiteAds.overThresholdPct : ETSY.offsiteAds.underThresholdPct;
+        pcts.push({ label: 'Offsite Ads (zorunlu)', pct: adsPct });
+      }
+      var etsyKargo = input.etsyKargoTRY != null ? input.etsyKargoTRY : 0;
+      var fixed = input.costTRY + etsyKargo + input.reklamTRY + listingFeeTRY;
+      var r = marginFromPrice(fixed, pcts, priceTRY);
+      results.etsy = r;
+    })();
+
     return results;
   }
 
@@ -490,12 +747,15 @@
     SHOPIFY_PLANS: SHOPIFY_PLANS,
     SHOPIFY_GATEWAY_DEFAULT_PCT: SHOPIFY_GATEWAY_DEFAULT_PCT,
     TRENDYOL_HIZMET_BEDELI_TRY: TRENDYOL_HIZMET_BEDELI_TRY,
+    N11_HIZMET_BEDELI_PCT: N11_HIZMET_BEDELI_PCT,
+    SHOPIER: SHOPIER,
     ETSY: ETSY,
     cargoPrice: cargoPrice,
     cheapestCargo: cheapestCargo,
     resolveRate: resolveRate,
     solvePrice: solvePrice,
     computeAll: computeAll,
+    computeAllFromPrice: computeAllFromPrice,
     round2: round2
   };
 
