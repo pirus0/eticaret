@@ -503,6 +503,151 @@ def main():
         amazon_warn_normal = page.eval_on_selector(".result-card.amazon .warn", "el => el.textContent")
         check("Normal durumda Amazon karti uyari GOSTERMIYOR", amazon_warn_normal.strip() == "", amazon_warn_normal)
 
+        # ============== AYARLAR PANELI (10 Agustos 2026) ==============
+        # Temiz bir baslangic: bilinen sektor/deger, panel kapali.
+        page.select_option("#sector", "giyim")
+        margin_input3 = page.query_selector("#margin")
+        margin_input3.click(click_count=3)
+        margin_input3.type("20")
+        page.wait_for_timeout(200)
+
+        panel_hidden_initially = page.eval_on_selector("#settingsPanel", "el => el.hidden")
+        check("Ayarlar paneli baslangicta kapali", panel_hidden_initially)
+
+        page.click("#settingsToggleBtn")
+        page.wait_for_timeout(200)
+        panel_open = page.eval_on_selector("#settingsPanel", "el => !el.hidden && getComputedStyle(el).display !== 'none'")
+        aria_expanded = page.eval_on_selector("#settingsToggleBtn", "el => el.getAttribute('aria-expanded')")
+        check("Ayarlar butonuna basinca panel GERCEKTEN aciliyor", panel_open)
+        check("Panel acilinca aria-expanded=true", aria_expanded == "true", aria_expanded)
+
+        sector_rows = page.eval_on_selector_all("#settingsSectorsBody tr", "els => els.length")
+        check("Sektor tablosunda KH.SECTORS ile ayni sayida satir (31)", sector_rows == 31, sector_rows)
+
+        taki_amazon_inputs = page.eval_on_selector_all(
+            "input[data-section='sectors'][data-key='taki'].settings-tiered, input[data-section='sectors'][data-key='taki'][data-subkey^='amazon']",
+            "els => els.length")
+        check("Kademeli sektor (taki) Amazon hucresinde 3 mini alan var", taki_amazon_inputs == 3, taki_amazon_inputs)
+        giyim_amazon_inputs = page.eval_on_selector_all("input[data-section='sectors'][data-key='giyim'][data-subkey='amazon']", "els => els.length")
+        check("Duz sektor (giyim) Amazon hucresinde tek alan var", giyim_amazon_inputs == 1, giyim_amazon_inputs)
+
+        # --- Sektor override: giyim/Trendyol degistirince SADECE Trendyol karti etkilenmeli ---
+        trendyol_before = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        amazon_before_sect = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        page.fill("input[data-section='sectors'][data-key='giyim'][data-subkey='trendyol']", "35")
+        page.wait_for_timeout(200)
+        trendyol_after = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        amazon_after_sect = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
+        check("Ayarlardan sektor Trendyol orani degistirince Trendyol fiyati degisiyor",
+              trendyol_before != trendyol_after, f"{trendyol_before} -> {trendyol_after}")
+        check("Ayarlardan sektor Trendyol orani Amazon fiyatini ETKILEMIYOR (izolasyon)",
+              amazon_before_sect == amazon_after_sect, f"{amazon_before_sect} -> {amazon_after_sect}")
+
+        sectors_badge_visible = page.eval_on_selector("[data-badge-section='sectors']", "el => !el.hidden")
+        toggle_dot_visible = page.eval_on_selector("#settingsToggleDot", "el => !el.hidden")
+        check("'Sektor komisyon oranlari' basligina degistirildi rozeti cikiyor", sectors_badge_visible)
+        check("Ayarlar dugmesinde degisiklik noktasi cikiyor (panel kapaliyken de gorulur)", toggle_dot_visible)
+
+        # --- Sabit hizmet bedeli override: n11/Trendyol hizmet bedeli KH.X uzerinden
+        # OKUNUYOR MU (bkz. calc.js/settings.js 10 Agustos duzeltmesi -- bu satirlar
+        # olmasaydi asagidaki iki kontrol de SESSIZCE gecerdi cunku deger hic
+        # degismemis olurdu; once/sonra farkli olmasi gercek etkiyi kanitliyor). ---
+        # 'Sektor komisyon oranlari' disindaki tum <details> gruplari varsayilan
+        # KAPALI (bkz. index.html) -- native <details> kapaliyken icerigi
+        # gorunmez/etkilesilemez sayiyor, bu yuzden once acmamiz gerekiyor.
+        page.eval_on_selector("#settingsGroupFees", "el => { el.open = true; }")
+        n11_before_fee = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        page.fill("input[data-section='fees'][data-key='n11HizmetBedeliPct']", "20")
+        page.wait_for_timeout(200)
+        n11_after_fee = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        check("Ayarlardan n11 hizmet bedeli degistirince n11 fiyati GERCEKTEN degisiyor (KH.N11_HIZMET_BEDELI_PCT canli okunuyor)",
+              n11_before_fee != n11_after_fee, f"{n11_before_fee} -> {n11_after_fee}")
+
+        trendyol_before_fee = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        page.fill("input[data-section='fees'][data-key='trendyolHizmetBedeliTRY']", "500")
+        page.wait_for_timeout(200)
+        trendyol_after_fee = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        check("Ayarlardan Trendyol hizmet bedeli degistirince Trendyol fiyati GERCEKTEN degisiyor (KH.TRENDYOL_HIZMET_BEDELI_TRY canli okunuyor)",
+              trendyol_before_fee != trendyol_after_fee, f"{trendyol_before_fee} -> {trendyol_after_fee}")
+
+        # --- Shopify varsayilan odeme saglayici orani: ana formdaki alan BOSALTILMADIKCA
+        # bu varsayilan hic devreye girmiyor (bkz. calc.js: input.shopifyGatewayPct != null
+        # ? ... : KH.SHOPIFY_GATEWAY_DEFAULT_PCT) -- once formu bosaltiyoruz. ---
+        page.eval_on_selector("#settingsGroupShopify", "el => { el.open = true; }")
+        # 'Platforma ozel ayarlar' (details.advanced), 331. satirdaki reload'dan
+        # beri tekrar acilmadi -- #shopifyGatewayPct'a erismeden once acmali.
+        page.eval_on_selector("details.advanced", "el => { el.open = true; }")
+        page.fill("#shopifyGatewayPct", "")
+        page.wait_for_timeout(200)
+        shopify_before_gw = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        page.fill("input[data-section='shopify'][data-key='gatewayDefaultPct']", "12")
+        page.wait_for_timeout(200)
+        shopify_after_gw = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
+        check("Ana form alani bosken ayarlardaki Shopify varsayilan orani GERCEKTEN devreye giriyor (KH.SHOPIFY_GATEWAY_DEFAULT_PCT canli okunuyor)",
+              shopify_before_gw != shopify_after_gw, f"{shopify_before_gw} -> {shopify_after_gw}")
+        page.fill("#shopifyGatewayPct", "2.65")
+        page.fill("input[data-section='shopify'][data-key='gatewayDefaultPct']", "")
+        page.wait_for_timeout(200)
+
+        # --- Kalicilik: sayfa yenilenince hem input degeri hem de HESAPLANAN
+        # fiyat (panel hic acilmadan) korunmali. ---
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(200)
+        persisted_sector_value = page.eval_on_selector("#sector", "el => el.value")
+        check("Sayfa yenilenince secili sektor de (KHStore/son durum degil, tarayici varsayilani) korunuyor", persisted_sector_value == "giyim", persisted_sector_value)
+        persisted_trendyol_price = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        # Reload anindan hemen once HEM sektor (%35 komisyon) HEM hizmet bedeli
+        # (500 TRY) override'i birlikte aktifti -- beklenen deger trendyol_after
+        # DEGIL (o sadece komisyon override'liyken alinmisti), ikisinin de
+        # uygulandigi trendyol_after_fee.
+        check("Sayfa yenilenince ayarlar OTOMATIK uygulaniyor (panel acilmadan Trendyol fiyati iki override'li)",
+              persisted_trendyol_price == trendyol_after_fee, f"beklenen(iki override'li)={trendyol_after_fee} gelen={persisted_trendyol_price}")
+        page.click("#settingsToggleBtn")
+        page.wait_for_timeout(200)
+        persisted_input_value = page.eval_on_selector("input[data-section='sectors'][data-key='giyim'][data-subkey='trendyol']", "el => el.value")
+        check("Sayfa yenilenince ayarlar panelindeki input DEGERI de (localStorage'dan) geri geliyor", persisted_input_value == "35", persisted_input_value)
+        # Reload sonrasi tum <details> gruplari HTML'deki varsayilan durumuna
+        # (fees KAPALI) doner -- tekrar acmadan icindeki input'a erisilemez.
+        page.eval_on_selector("#settingsGroupFees", "el => { el.open = true; }")
+        n11_fee_input_persisted = page.eval_on_selector("input[data-section='fees'][data-key='n11HizmetBedeliPct']", "el => el.value")
+        check("n11 hizmet bedeli override'i de kaliciliktan sonra input'ta gorunuyor", n11_fee_input_persisted == "20", n11_fee_input_persisted)
+
+        # --- Bolum sifirlama: sadece 'sectors' sifirlanmali, 'fees' surmeli. ---
+        page.click("button.settings-reset-section[data-reset-section='sectors']")
+        page.wait_for_timeout(200)
+        trendyol_after_section_reset = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
+        # 'sectors' sifirlaninca SADECE komisyon fabrikaya doner -- 'fees'
+        # bolumundeki hizmet bedeli override'i (500 TRY) HALA aktif, bu yuzden
+        # fiyat trendyol_before'a (iki override de yokken) DEGIL, aradaki
+        # farkli bir degere doner; iki bolumun BAGIMSIZ sifirlanabildigini
+        # ispatlayan asil kanit iki yonlu karsilastirma.
+        check("'Sektorleri sifirla' Trendyol fiyatini degistiriyor (sektor override kalkti)",
+              trendyol_after_section_reset != trendyol_after_fee, f"{trendyol_after_fee} -> {trendyol_after_section_reset}")
+        check("'Sektorleri sifirla' SONRASI da orijinal degere DONMUYOR (fees override'i hala etkili, bolumler bagimsiz)",
+              trendyol_after_section_reset != trendyol_before, f"orijinal={trendyol_before} simdiki={trendyol_after_section_reset}")
+        n11_fee_input_after_section_reset = page.eval_on_selector("input[data-section='fees'][data-key='n11HizmetBedeliPct']", "el => el.value")
+        check("'Sektorleri sifirla' fees bolumune DOKUNMUYOR (n11 hizmet bedeli override'i hala 20)",
+              n11_fee_input_after_section_reset == "20", n11_fee_input_after_section_reset)
+        sectors_badge_after_section_reset = page.eval_on_selector("[data-badge-section='sectors']", "el => el.hidden")
+        check("Bolum sifirlaninca 'degistirildi' rozeti kalkiyor", sectors_badge_after_section_reset)
+
+        # --- Tumunu sifirla: hicbir override kalmamali. ---
+        page.click("#settingsResetAllBtn")
+        page.wait_for_timeout(200)
+        n11_after_reset_all = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        check("'Tumunu sifirla' sonrasi n11 fiyati orijinal degere donuyor",
+              n11_after_reset_all == n11_before_fee, f"beklenen={n11_before_fee} gelen={n11_after_reset_all}")
+        toggle_dot_after_reset_all = page.eval_on_selector("#settingsToggleDot", "el => el.hidden")
+        check("'Tumunu sifirla' sonrasi degisiklik noktasi kayboluyor", toggle_dot_after_reset_all)
+        any_input_with_value = page.eval_on_selector_all(
+            "#settingsPanel input[data-section]", "els => els.filter(e => e.value !== '').length")
+        check("'Tumunu sifirla' sonrasi panelde DOLU input kalmiyor", any_input_with_value == 0, any_input_with_value)
+
+        page.click("#settingsToggleBtn")
+        page.wait_for_timeout(200)
+        panel_closed_again = page.eval_on_selector("#settingsPanel", "el => el.hidden")
+        check("Ayarlar butonu tekrar basinca panel kapaniyor", panel_closed_again)
+
         # Butun etkilesimli akis (mod gecisi, tema degisimi, sayfa yenileme dahil)
         # boyunca hic konsol hatasi birikmemis mi? (Ilk kontrol satir 39'da sadece
         # ilk sayfa yuklemesini kapsiyordu; page.on() dinleyicisi reload'lar dahil

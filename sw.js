@@ -2,10 +2,13 @@
 
 // Surum numarasini her rate/kur guncellemesinde artirin — bu, eski istemcilerin
 // onbellegini temizleyip yeni verileri cekmesini saglar.
-// v6: bug/gorsel/optimizasyon turu (kademeli komisyon duzeltmesi, negatif
-// deger sanitizasyonu, CSS/erisilebilirlik duzeltmeleri) - eski onbellek
-// bu duzeltmeleri icermeyen calc.js/app.js/styles.css sunmaya devam ederdi.
-var CACHE_NAME = 'kar-hesap-v6';
+// v7: ayarlar paneli eklendi (settings.js) + calc.js'te kritik bir duzeltme
+// (KH.N11_HIZMET_BEDELI_PCT / KH.TRENDYOL_HIZMET_BEDELI_TRY / KH.SHOPIFY_
+// GATEWAY_DEFAULT_PCT artik dogrudan KH.X uzerinden okunuyor, boylece ayarlar
+// panelinden yapilan degisiklikler hesaplamaya gercekten yansiyor) - eski
+// onbellek settings.js'i hic sunmazdi ve calc.js'in eski (duzeltilmemis)
+// surumunde ayarlar sessizce yok sayilirdi.
+var CACHE_NAME = 'kar-hesap-v7';
 
 var APP_SHELL = [
   './',
@@ -13,6 +16,7 @@ var APP_SHELL = [
   './styles.css',
   './calc.js',
   './storage.js',
+  './settings.js',
   './app.js',
   './manifest.json',
   './icons/favicon-16.png',

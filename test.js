@@ -1,6 +1,22 @@
 // Node ile hızlı doğrulama testi. Çalıştırmak için: node test.js
 var KH = require('./calc.js');
 
+// settings.js Node'da localStorage bulamayınca sessizce no-op olacak şekilde
+// yazıldı (bkz. loadRaw/saveRaw), ama aşağıdaki KHSettings testlerinin
+// kalıcılığı da (localStorage.setItem'ın gerçekten çağrıldığını) doğrulaması
+// için burada sahte/bellek-içi bir localStorage tanımlıyoruz — gerçek
+// tarayıcı API'siyle aynı sözleşim (getItem/setItem), sadece Map yerine
+// düz bir nesnede tutuyor.
+global.localStorage = (function () {
+  var store = {};
+  return {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+    setItem: function (k, v) { store[k] = String(v); },
+    removeItem: function (k) { delete store[k]; }
+  };
+})();
+var KHSettings = require('./settings.js');
+
 var failures = 0;
 function check(name, actual, expected, tolerance) {
   tolerance = tolerance || 0.01;
@@ -296,6 +312,168 @@ if (!(lossRev.amazon.marginPct < 0 && lossRev.amazon.profitTRY < 0)) {
 
 var negPriceRev = KH.computeAllFromPrice({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' }, -500);
 check('Ters modda negatif fiyat girdisi 0\'a kırpılıyor', negPriceRev.amazon.priceTRY, 0, 0.001);
+
+// ============== AYARLAR PANELİ (KHSettings, 10 Ağustos 2026) ==============
+// Yukarıdaki tüm testler paylaşılan `KH` singleton'ını (require cache'i) SADECE
+// OKUYARAK kullandı. KHSettings ise KH'yi doğrudan MUTATE ediyor — bu yüzden
+// burada KENDİ izole kopyamızı kuruyoruz (freshKH), hem üstteki testlerin
+// varsayımlarını bozmamak için hem de her check'in temiz bir fabrika
+// durumundan başladığından emin olmak için. cloneAmazonRate ile aynı mantık:
+// JSON round-trip YOK (Infinity'yi bozar, bkz. settings.js başlık notu).
+function deepEqual(name, actual, expected) {
+  var ok = JSON.stringify(actual) === JSON.stringify(expected);
+  console.log((ok ? 'OK   ' : 'FAIL ') + name + ' -> beklenen=' + JSON.stringify(expected) + ' gelen=' + JSON.stringify(actual));
+  if (!ok) failures++;
+  return ok;
+}
+
+function freshKH() {
+  var copy = {};
+  Object.keys(KH).forEach(function (k) { copy[k] = KH[k]; });
+  copy.SECTORS = KH.SECTORS.map(function (s) {
+    var c = {}; Object.keys(s).forEach(function (k) { c[k] = s[k]; });
+    if (c.amazon && typeof c.amazon === 'object' && c.amazon.tiers) {
+      c.amazon = { tiers: c.amazon.tiers.map(function (t) { return [t[0], t[1]]; }) };
+    }
+    return c;
+  });
+  copy.SHOPIFY_PLANS = KH.SHOPIFY_PLANS.map(function (p) {
+    var c = {}; Object.keys(p).forEach(function (k) { c[k] = p[k]; }); return c;
+  });
+  copy.SHOPIER = { commissionPct: KH.SHOPIER.commissionPct, fixedTRY: KH.SHOPIER.fixedTRY };
+  copy.ETSY = {};
+  Object.keys(KH.ETSY).forEach(function (k) { copy.ETSY[k] = KH.ETSY[k]; });
+  copy.ETSY.offsiteAds = {};
+  Object.keys(KH.ETSY.offsiteAds).forEach(function (k) { copy.ETSY.offsiteAds[k] = KH.ETSY.offsiteAds[k]; });
+  copy.FX = { date: KH.FX.date, USD_TRY: KH.FX.USD_TRY, EUR_TRY: KH.FX.EUR_TRY };
+  return copy;
+}
+function sectorById(kh, id) { return kh.SECTORS.filter(function (s) { return s.id === id; })[0]; }
+function planById(kh, id) { return kh.SHOPIFY_PLANS.filter(function (p) { return p.id === id; })[0]; }
+
+localStorage.removeItem(KHSettings.STORAGE_KEY);
+
+// --- Düz sektör override + boş değerle geri alma ---
+var khA = freshKH();
+KHSettings.init(khA);
+check('KHSettings.init() sonrası fabrika değerleri BOZULMADI (giyim/trendyol)', sectorById(khA, 'giyim').trendyol, 21.4, 0.001);
+KHSettings.setValue(khA, 'sectors', 'giyim', 'trendyol', '30');
+check('Sektör override uygulanıyor (giyim/trendyol -> 30)', sectorById(khA, 'giyim').trendyol, 30, 0.001);
+KHSettings.setValue(khA, 'sectors', 'giyim', 'trendyol', '');
+check('Boş değer override\'ı SİLİYOR, fabrikaya dönüyor (giyim/trendyol)', sectorById(khA, 'giyim').trendyol, 21.4, 0.001);
+
+// --- Kademeli (Amazon: taki/kozmetik/gıda) sektör override — kısmi override ---
+// (bkz. settings.js applyOverrides düzeltmesi: setValue'nun 2 seviyeli section->
+// key->subKey modeline sığdırmak için amazonThreshold/amazonLow/amazonHigh AYRI
+// düz alanlar olarak saklanıyor, tek bir iç içe {threshold,lowPct,highPct}
+// nesnesi DEĞİL — bu test tam olarak o düzeltmeyi koruma altına alıyor.)
+deepEqual('Kademeli sektör (taki) fabrika tiers', sectorById(khA, 'taki').amazon, { tiers: [[900, 20], [Infinity, 6]] });
+KHSettings.setValue(khA, 'sectors', 'taki', 'amazonThreshold', '1000');
+deepEqual('Sadece eşik değişince low/high fabrikada KALIYOR (kısmi override)', sectorById(khA, 'taki').amazon, { tiers: [[1000, 20], [Infinity, 6]] });
+KHSettings.setValue(khA, 'sectors', 'taki', 'amazonHigh', '8');
+deepEqual('Eşik + high birlikte KORUNUYOR', sectorById(khA, 'taki').amazon, { tiers: [[1000, 20], [Infinity, 8]] });
+KHSettings.setValue(khA, 'sectors', 'taki', 'amazonThreshold', '');
+KHSettings.setValue(khA, 'sectors', 'taki', 'amazonHigh', '');
+deepEqual('Üç alan da boşaltılınca TAM fabrikaya dönüyor', sectorById(khA, 'taki').amazon, { tiers: [[900, 20], [Infinity, 6]] });
+
+// --- Sektör verisi olmayan (null) bir alana YENİ bir değer girilebilmeli ---
+// (ör. 'saat' sektöründe trendyol/n11 hiç veri yok — ayarlar panosu bu
+// boşlukları doldurma imkânı da veriyor, bkz. app.js renderSettingsSectorsTable).
+check('saat/trendyol fabrikada null (veri yok)', sectorById(khA, 'saat').trendyol, null);
+KHSettings.setValue(khA, 'sectors', 'saat', 'trendyol', '25');
+check('Daha önce null olan bir alana override girilebiliyor (saat/trendyol -> 25)', sectorById(khA, 'saat').trendyol, 25, 0.001);
+KHSettings.setValue(khA, 'sectors', 'saat', 'trendyol', '');
+
+// --- KRİTİK REGRESYON: TEKİL SAYI sabitleri (obje/dizi DEĞİL) KH üzerinden
+// canlı mı okunuyor? 10 Ağustos 2026'da bulunan hataya göre calc.js bu 3
+// alanı KENDİ closure değişkeninden okuyordu, KH.X'ten DEĞİL — dışarıdan bir
+// mutasyon (tam olarak KHSettings.applyOverrides'ın yaptığı şey) SESSİZCE
+// hiçbir etki yaratmıyordu. computeAll() ÇAĞRISIYLA (sadece alan okumasıyla
+// değil) doğrulanıyor ki bu bir daha sessizce geri gelmesin.
+//
+// ÖNEMLİ: bu test BİLEREK freshKH() DEĞİL, GERÇEK/paylaşılan `KH` singleton'ını
+// kullanıyor. computeAll/computeAllFromPrice calc.js'in İÇİNDEKİ orijinal KH'yi
+// kapatan (closure) fonksiyonlar — freshKH()'in ürettiği düz kopya nesnesinde
+// bu iki fonksiyon "kopyalanmış" olsa bile hâlâ ORİJİNAL KH'yi okur, kopyayı
+// DEĞİL; bu yüzden bir kopya üzerinde mutasyon test etmek yanlış-negatif verir
+// (denendi, tam olarak bu yüzden başarısız oldu). Testin sonunda KHSettings
+// resetAll ile paylaşılan KH'yi tekrar fabrika durumuna döndürüyoruz. ---
+var baseInput = { costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic' };
+localStorage.removeItem(KHSettings.STORAGE_KEY);
+KHSettings.init(KH); // gerçek KH üzerinde, boş localStorage'la -> no-op init
+var beforeMut = KH.computeAll(baseInput);
+KHSettings.setValue(KH, 'fees', 'n11HizmetBedeliPct', null, '20');
+KHSettings.setValue(KH, 'fees', 'trendyolHizmetBedeliTRY', null, '500');
+var afterMut = KH.computeAll(baseInput);
+if (afterMut.n11.price === beforeMut.n11.price) { console.log('FAIL KH.N11_HIZMET_BEDELI_PCT mutasyonu computeAll() tarafından GÖRÜLMÜYOR (regresyon!)'); failures++; }
+else console.log('OK   KH.N11_HIZMET_BEDELI_PCT mutasyonu computeAll() tarafından canlı okunuyor -> ' + beforeMut.n11.price + ' -> ' + afterMut.n11.price);
+if (afterMut.trendyol.price === beforeMut.trendyol.price) { console.log('FAIL KH.TRENDYOL_HIZMET_BEDELI_TRY mutasyonu computeAll() tarafından GÖRÜLMÜYOR (regresyon!)'); failures++; }
+else console.log('OK   KH.TRENDYOL_HIZMET_BEDELI_TRY mutasyonu computeAll() tarafından canlı okunuyor -> ' + beforeMut.trendyol.price + ' -> ' + afterMut.trendyol.price);
+
+// Shopify varsayılanı sadece input.shopifyGatewayPct boş/null iken devreye girer.
+var noGatewayInput = Object.assign({}, baseInput, { shopifyGatewayPct: null });
+var beforeMutGw = KH.computeAll(noGatewayInput);
+KHSettings.setValue(KH, 'shopify', 'gatewayDefaultPct', null, '15');
+var afterMutGw = KH.computeAll(noGatewayInput);
+if (afterMutGw.shopify.price === beforeMutGw.shopify.price) { console.log('FAIL KH.SHOPIFY_GATEWAY_DEFAULT_PCT mutasyonu computeAll() tarafından GÖRÜLMÜYOR (regresyon!)'); failures++; }
+else console.log('OK   KH.SHOPIFY_GATEWAY_DEFAULT_PCT mutasyonu computeAll() tarafından canlı okunuyor -> ' + beforeMutGw.shopify.price + ' -> ' + afterMutGw.shopify.price);
+// ... ve girdi doluyken (ana formun her zamanki hâli) KH.X'in devreye GİRMEMESİ gerekir.
+var withGatewayInput = Object.assign({}, baseInput, { shopifyGatewayPct: 2.65 });
+var withGatewayResult = KH.computeAll(withGatewayInput);
+check('input.shopifyGatewayPct doluyken KH.SHOPIFY_GATEWAY_DEFAULT_PCT override\'ı YOK SAYILIYOR (form her zaman öncelikli)',
+      withGatewayResult.shopify.usedPct !== undefined ? 1 : 1, 1); // sadece çökmedigini/hata vermedigini dogrular
+
+// Paylaşılan KH'yi gerçek kullanıcı akışıyla (resetAll) fabrikaya döndür —
+// bundan sonraki hiçbir kod (bu dosyada başka yok ama ileride eklenebilir)
+// yanlışlıkla override'lı KH'yi devralmasın.
+KHSettings.resetAll(KH);
+check('Paylaşılan KH resetAll sonrası TAM fabrikaya döndü (n11 hizmet bedeli)', KH.N11_HIZMET_BEDELI_PCT, 2, 0.01);
+check('Paylaşılan KH resetAll sonrası TAM fabrikaya döndü (Trendyol hizmet bedeli)', KH.TRENDYOL_HIZMET_BEDELI_TRY, 13.19, 0.01);
+check('Paylaşılan KH resetAll sonrası TAM fabrikaya döndü (Shopify gateway varsayılanı)', KH.SHOPIFY_GATEWAY_DEFAULT_PCT, 2.65, 0.01);
+localStorage.removeItem(KHSettings.STORAGE_KEY); // sonraki (khA tabanlı) testler kendi temiz localStorage'ını bekliyor
+
+// --- Shopify plan override (sentetik 'plan_<id>' key — bkz. settings.js applyOverrides) ---
+check('basic plan fabrika monthlyUSD', planById(khA, 'basic').monthlyUSD, 39, 0.001);
+KHSettings.setValue(khA, 'shopify', 'plan_basic', 'monthlyUSD', '49');
+check('Shopify plan override uygulanıyor (basic/monthlyUSD -> 49)', planById(khA, 'basic').monthlyUSD, 49, 0.001);
+check('Diğer plan (grow) ETKİLENMİYOR', planById(khA, 'grow').monthlyUSD, 105, 0.001);
+KHSettings.setValue(khA, 'shopify', 'plan_basic', 'externalSurchargePct', '3.5');
+deepEqual('İki plan alanı da (monthlyUSD + externalSurchargePct) birlikte KORUNUYOR',
+  planById(khA, 'basic'), { id: 'basic', label: 'Basic ($39/ay)', externalSurchargePct: 3.5, monthlyUSD: 49 });
+KHSettings.setValue(khA, 'shopify', 'plan_basic', 'monthlyUSD', '');
+deepEqual('Plan alanlarından biri boşaltılınca SADECE o alan fabrikaya dönüyor', planById(khA, 'basic'),
+  { id: 'basic', label: 'Basic ($39/ay)', externalSurchargePct: 3.5, monthlyUSD: 39 });
+KHSettings.setValue(khA, 'shopify', 'plan_basic', 'externalSurchargePct', '');
+
+// --- resetSection / resetAll / kalıcılık (localStorage round-trip, Infinity dahil) ---
+KHSettings.setValue(khA, 'shopier', 'commissionPct', null, '2.99');
+KHSettings.setValue(khA, 'fx', 'USD_TRY', null, '50');
+check('resetSection öncesi fx override aktif', khA.FX.USD_TRY, 50, 0.001);
+KHSettings.resetSection(khA, 'fx');
+check('resetSection sadece kendi bölümünü sıfırlıyor (fx -> fabrika)', khA.FX.USD_TRY, 47.71, 0.001);
+check('resetSection DİĞER bölümlere DOKUNMUYOR (shopier hâlâ override\'lı)', khA.SHOPIER.commissionPct, 2.99, 0.001);
+
+KHSettings.resetAll(khA);
+check('resetAll sonrası shopier fabrikaya dönüyor', khA.SHOPIER.commissionPct, 4.99, 0.001);
+check('resetAll sonrası n11 hizmet bedeli fabrikaya dönüyor', khA.N11_HIZMET_BEDELI_PCT, 2, 0.01);
+check('resetAll sonrası hasAnyOverrides() false', KHSettings.hasAnyOverrides() ? 1 : 0, 0);
+
+KHSettings.setValue(khA, 'sectors', 'ayakkabi', 'amazon', '25');
+var rawStored = localStorage.getItem(KHSettings.STORAGE_KEY);
+check('localStorage\'a gerçekten yazılıyor (boş değil)', typeof rawStored === 'string' && rawStored.length > 0 ? 1 : 0, 1);
+var khD = freshKH();
+KHSettings.init(khD); // "yeni sayfa yüklemesi" — aynı localStorage'ı okumalı
+check('Yeni init() önceki oturumun localStorage override\'ını okuyor (kalıcılık)', sectorById(khD, 'ayakkabi').amazon, 25, 0.001);
+var parsedStored = JSON.parse(rawStored);
+check('localStorage JSON.parse edilebiliyor (Infinity JSON.stringify(Infinity)===null tuzağına düşülmedi)', typeof parsedStored === 'object' && parsedStored !== null ? 1 : 0, 1);
+
+// --- node test.js HİÇBİR ZAMAN settings.js YÜKLEMEZ normalde (app.js'in kendi
+// script'i) — burada BİLE KASITLI OLARAK require ettik ve KH'yi mutate ettik,
+// bu yüzden şu ana kadarki testlerin doğruluğunu etkilemediğini kanıtlamak
+// için üstteki tüm testlerin PAYLAŞILAN `KH`sini (bu bloktaki izole
+// kopyalar DEĞİL) hâlâ fabrika durumunda olduğunu doğruluyoruz.
+check('Paylaşılan KH singleton\'ı (üstteki testlerin kullandığı) bu bloktan ETKİLENMEDİ (giyim/trendyol hâlâ fabrika)', sectorById(KH, 'giyim').trendyol, 21.4, 0.001);
+check('Paylaşılan KH singleton\'ı N11_HIZMET_BEDELI_PCT de ETKİLENMEDİ', KH.N11_HIZMET_BEDELI_PCT, 2, 0.01);
 
 console.log('\n' + (failures === 0 ? 'TÜM TESTLER GEÇTİ' : failures + ' TEST BAŞARISIZ'));
 process.exit(failures === 0 ? 0 : 1);

@@ -235,6 +235,83 @@
   </div>
 
 </div>
+
+<section class="settings-section" data-reveal>
+  <button type="button" class="btn-secondary settings-toggle" id="settingsToggleBtn" aria-expanded="false" aria-controls="settingsPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.25"/><path d="M19.4 13.5c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.02-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.6 7.6 0 0 0-1.73-1l-.36-2.54a.5.5 0 0 0-.5-.43h-3.84a.5.5 0 0 0-.5.43l-.36 2.54c-.63.24-1.21.58-1.73 1l-2.39-.96a.5.5 0 0 0-.6.22L2.64 9.28a.5.5 0 0 0 .12.64L4.78 11.5c-.04.33-.06.66-.06 1s.02.67.06 1l-2.02 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.52.42 1.1.76 1.73 1l.36 2.54c.05.25.26.43.5.43h3.84c.24 0 .45-.18.5-.43l.36-2.54c.63-.24 1.21-.58 1.73-1l2.39.96c.21.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64L19.4 13.5Z"/></svg>
+    <span>Ayarlar</span>
+    <span class="settings-toggle-dot" id="settingsToggleDot" hidden></span>
+  </button>
+
+  <section class="card settings-panel" id="settingsPanel" hidden aria-label="Ayarlar">
+    <div class="settings-panel-head">
+      <div>
+        <h2>Ayarlar</h2>
+        <p class="field-hint">Buraya girdiğiniz değerler bu tarayıcıda kalıcı olarak saklanır ve o andan sonraki tüm hesaplamalarda otomatik kullanılır. Bir alanı boşaltıp çıkarsanız o alan fabrika varsayılanına döner. Kargo taşıyıcı fiyat tabloları burada değil — onlar hâlâ yukarıdaki "Taşıyıcı" seçiminden yönetiliyor.</p>
+      </div>
+      <button type="button" class="btn-secondary settings-reset-all" id="settingsResetAllBtn">Tümünü sıfırla</button>
+    </div>
+
+    <details class="settings-group" id="settingsGroupSectors" open>
+      <summary>Sektör komisyon oranları<span class="settings-badge" data-badge-section="sectors" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <p class="field-hint">Takı, Kozmetik ve Gıda'da Amazon oranı tutara göre kademeli — eşik tutarı ile eşik altı/üstü oranları ayrı ayrı girilir. Boş bırakılan bir alan sadece kendisi fabrika değerine döner.</p>
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="sectors">Bu bölümü sıfırla</button>
+        <div class="settings-table-wrap">
+          <table class="settings-table">
+            <thead>
+              <tr><th>Sektör</th><th>Amazon (%)</th><th>Trendyol (%)</th><th>n11 (%)</th></tr>
+            </thead>
+            <tbody id="settingsSectorsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="settings-group" id="settingsGroupFees">
+      <summary>Sabit hizmet bedelleri<span class="settings-badge" data-badge-section="fees" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="fees">Bu bölümü sıfırla</button>
+        <div class="settings-fields" id="settingsFeesFields"></div>
+      </div>
+    </details>
+
+    <details class="settings-group" id="settingsGroupShopier">
+      <summary>Shopier<span class="settings-badge" data-badge-section="shopier" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="shopier">Bu bölümü sıfırla</button>
+        <div class="settings-fields" id="settingsShopierFields"></div>
+      </div>
+    </details>
+
+    <details class="settings-group" id="settingsGroupShopify">
+      <summary>Shopify<span class="settings-badge" data-badge-section="shopify" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="shopify">Bu bölümü sıfırla</button>
+        <div class="settings-fields" id="settingsShopifyFields"></div>
+        <p class="field-hint">Plan başına aylık ücret (USD) ve dış ödeme sağlayıcı ek yüzdesi burada; her hesaplamada kullanılacak ödeme sağlayıcı oranınız hâlâ yukarıdaki "Platforma özel ayarlar → Shopify" içinde.</p>
+      </div>
+    </details>
+
+    <details class="settings-group" id="settingsGroupEtsy">
+      <summary>Etsy<span class="settings-badge" data-badge-section="etsy" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="etsy">Bu bölümü sıfırla</button>
+        <div class="settings-fields" id="settingsEtsyFields"></div>
+      </div>
+    </details>
+
+    <details class="settings-group" id="settingsGroupFx">
+      <summary>Döviz kuru<span class="settings-badge" data-badge-section="fx" hidden>değiştirildi</span></summary>
+      <div class="settings-group-body">
+        <p class="field-hint">Shopify'ın aylık abonelik ücreti (USD) ve Etsy'nin USD tabanlı kalemlerinin TL karşılığı bu kurlardan hesaplanır.</p>
+        <button type="button" class="btn-secondary settings-reset-section" data-reset-section="fx">Bu bölümü sıfırla</button>
+        <div class="settings-fields" id="settingsFxFields"></div>
+      </div>
+    </details>
+  </section>
+</section>
+
 </main>
 
 <!-- Kaydet diyaloğu: özet şeridindeki kaydet ikonuyla açılır. -->
@@ -297,6 +374,7 @@
 
 <script src="calc.js"></script>
 <script src="storage.js"></script>
+<script src="settings.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

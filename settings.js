@@ -5,15 +5,31 @@
  * ("Trendyol hizmet ücretinden hangi sektöre ne kadar yüzdelik kesmesi kargo
  * ücretleri gibi her şeyi düzenleyebildiğim bir ayarlar sekmesi olsun").
  *
- * calc.js'in KENDİSİ DEĞİŞMEDİ ve DEĞİŞMEMELİ — bu dosya sadece calc.js'in
- * dışa aktardığı KH nesnesinin (SECTORS, TRENDYOL_HIZMET_BEDELI_TRY, vb.)
- * üzerine, sayfa yüklenirken BİR KEZ (init), kullanıcının kaydettiği
- * düzeltmeleri uyguluyor — doğrudan mutate ederek. computeAll()/
- * computeAllFromPrice() hiçbir değişiklik görmeden, zaten okuduğu tabloların
- * GÜNCEL halini okumuş oluyor. `node test.js` bu dosyayı hiç yüklemediği için
- * (tarayıcıya özel, `localStorage` kullanıyor) calc.js'in kendi testleri her
- * zaman GERÇEK fabrika varsayılanlarına karşı çalışmaya devam ediyor —
- * kullanıcının ayarları test sonuçlarını asla etkilemez.
+ * calc.js'in HESAPLAMA MANTIĞI değişmedi — bu dosya sadece calc.js'in dışa
+ * aktardığı KH nesnesinin (SECTORS, TRENDYOL_HIZMET_BEDELI_TRY, vb.) üzerine,
+ * sayfa yüklenirken BİR KEZ (init), kullanıcının kaydettiği düzeltmeleri
+ * uyguluyor — doğrudan mutate ederek. computeAll()/computeAllFromPrice()
+ * hiçbir özel kod eklenmeden, zaten okuduğu tabloların GÜNCEL halini okumuş
+ * oluyor. `node test.js` bu dosyayı hiç yüklemediği için (tarayıcıya özel,
+ * `localStorage` kullanıyor) calc.js'in kendi testleri her zaman GERÇEK
+ * fabrika varsayılanlarına karşı çalışmaya devam ediyor — kullanıcının
+ * ayarları test sonuçlarını asla etkilemez.
+ *
+ * NOT (10 Ağustos 2026, bu katman yazılırken bulunup düzeltilen bir hata):
+ * calc.js'te SECTORS/SHOPIFY_PLANS/SHOPIER/ETSY/FX gibi NESNE/DİZİ değerler
+ * `KH.X`'e referansla (aynı bellek adresi) aktarılıyordu, bu yüzden dışarıdan
+ * `KH.SECTORS[i].trendyol = ...` gibi bir mutasyon computeAll()'ın kendi iç
+ * SECTORS değişkenini de otomatik günceller (aynı nesne). Ama üç TEKİL SAYI
+ * sabiti (TRENDYOL_HIZMET_BEDELI_TRY, N11_HIZMET_BEDELI_PCT,
+ * SHOPIFY_GATEWAY_DEFAULT_PCT) `KH`'ye bir DEĞER KOPYASI olarak yazılıyordu
+ * ve computeAll() bunları KENDİ iç closure değişkeninden (KH.X'ten değil)
+ * okuyordu — yani `KH.TRENDYOL_HIZMET_BEDELI_TRY = 500` gibi bir dışarıdan
+ * mutasyon SESSİZCE HİÇBİR ETKİ YARATMIYORDU (ayarlar paneli "kaydedildi"
+ * gösterirdi ama fiyat hiç değişmezdi). Bu katmanı arayüze bağlamadan ÖNCE
+ * calc.js'te bu 3 okuma noktası (toplam 6 kullanım, computeAll +
+ * computeAllFromPrice) `KH.X` okuyacak şekilde düzeltildi — davranışsal
+ * olarak nötr (KH.X başlangıçta X'e eşit, `node test.js` hâlâ geçiyor),
+ * ama artık bu üç alan da diğerleri gibi gerçekten "canlı" okunuyor.
  *
  * Kapsam (kasıtlı olarak kısmi — kullanıcıyla netleştirildi, 10 Ağustos 2026):
  * sektör komisyon oranları (Amazon/Trendyol/n11), Trendyol/n11 hizmet
@@ -125,17 +141,28 @@
       KH.SECTORS.forEach(function (s) {
         var o = ov.sectors[s.id];
         if (!o) return;
+        // Düz (tek sayı) sektörler 'amazon' subKey'ini kullanır (setValue'nun
+        // 2 seviyeli section->key->subKey modeliyle birebir uyumlu). Kademeli
+        // sektörler (taki/kozmetik/gida) ÜÇ AYRI DÜZ subKey kullanır
+        // (amazonThreshold/amazonLow/amazonHigh) — setValue tek bir subKey'in
+        // ALTINA {threshold,lowPct,highPct} gibi iç içe bir nesne yazamadığı
+        // için (yalnızca section->key->subKey=deger destekliyor), üç ayrı düz
+        // alan olarak saklanıp burada birleştiriliyor. Üçünden sadece biri
+        // değiştirilmişse (ör. sadece eşik), eksik olan(lar) o an KH'de duran
+        // (restoreFactory'den yeni dönmüş, dolayısıyla FABRİKA) kademe
+        // değerinden tamamlanır — "boş alan = o alan varsayılana döner"
+        // deseniyle tutarlı, üçü birden zorunlu değil.
         if (o.amazon != null) {
-          if (typeof o.amazon === 'object') {
-            var th = clampPositive(o.amazon.threshold);
-            var lo = clampPositive(o.amazon.lowPct);
-            var hi = clampPositive(o.amazon.highPct);
-            if (th != null && lo != null && hi != null) {
-              s.amazon = { tiers: [[th, lo], [Infinity, hi]] };
-            }
-          } else {
-            var flat = clampPositive(o.amazon);
-            if (flat != null) s.amazon = flat;
+          var flat = clampPositive(o.amazon);
+          if (flat != null) s.amazon = flat;
+        }
+        if (o.amazonThreshold != null || o.amazonLow != null || o.amazonHigh != null) {
+          var curTiers = (s.amazon && s.amazon.tiers) ? s.amazon.tiers : null;
+          var th = o.amazonThreshold != null ? clampPositive(o.amazonThreshold) : (curTiers ? curTiers[0][0] : null);
+          var lo = o.amazonLow != null ? clampPositive(o.amazonLow) : (curTiers ? curTiers[0][1] : null);
+          var hi = o.amazonHigh != null ? clampPositive(o.amazonHigh) : (curTiers ? curTiers[1][1] : null);
+          if (th != null && lo != null && hi != null) {
+            s.amazon = { tiers: [[th, lo], [Infinity, hi]] };
           }
         }
         if (o.trendyol != null) {
@@ -173,20 +200,24 @@
         var gw = clampPositive(ov.shopify.gatewayDefaultPct);
         if (gw != null) KH.SHOPIFY_GATEWAY_DEFAULT_PCT = gw;
       }
-      if (ov.shopify.plans) {
-        KH.SHOPIFY_PLANS.forEach(function (p) {
-          var po = ov.shopify.plans[p.id];
-          if (!po) return;
-          if (po.monthlyUSD != null) {
-            var mu = clampPositive(po.monthlyUSD);
-            if (mu != null) p.monthlyUSD = mu;
-          }
-          if (po.externalSurchargePct != null) {
-            var es = clampPositive(po.externalSurchargePct);
-            if (es != null) p.externalSurchargePct = es;
-          }
-        });
-      }
+      // Her plan icin ayrı SENTETİK bir "key" (`plan_<id>`) kullanılıyor —
+      // `overrides.shopify.plans[id].monthlyUSD` gibi 3 seviyeli bir yol
+      // setValue(section,key,subKey)'in 2 seviyeli modeline sığmazdı;
+      // `plan_<id>`'yi doğrudan `key` olarak kullanmak
+      // (overrides.shopify['plan_'+id][subKey]) aynı 2 seviyeli modelle
+      // ekstra bir özel durum kodu gerekmeden çalışıyor.
+      KH.SHOPIFY_PLANS.forEach(function (p) {
+        var po = ov.shopify['plan_' + p.id];
+        if (!po) return;
+        if (po.monthlyUSD != null) {
+          var mu = clampPositive(po.monthlyUSD);
+          if (mu != null) p.monthlyUSD = mu;
+        }
+        if (po.externalSurchargePct != null) {
+          var es = clampPositive(po.externalSurchargePct);
+          if (es != null) p.externalSurchargePct = es;
+        }
+      });
     }
     if (ov.etsy) {
       var flatMap = {

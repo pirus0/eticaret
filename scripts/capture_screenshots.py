@@ -50,8 +50,29 @@ with sync_playwright() as p:
     mobile.click("#themeToggleBtn")
     mobile.wait_for_timeout(400)
     mobile.screenshot(path="shot_mobile_dark_results.png")
+    mobile.click("#themeToggleBtn")  # sonraki senaryo icin acik temaya don
+    mobile.wait_for_timeout(400)
 
+    # 8) Mobil, ayarlar paneli (acik tema) -- sektor tablosu + kademeli (Takı) satiri
+    mobile.click("#settingsToggleBtn")
+    mobile.wait_for_timeout(300)
+    mobile.eval_on_selector("#settingsPanel", "el => el.scrollIntoView({block:'start'})")
+    mobile.screenshot(path="shot_settings_mobile_light.png", full_page=True)
     mobile.close()
+
+    # 9) Genis ekran, karanlik tema, ayarlar paneli -- tum bolumler acik
+    wide2 = browser.new_page(viewport={"width": 1400, "height": 1000})
+    wide2.goto(f"{BASE}/index.html", wait_until="networkidle")
+    wide2.click("#themeToggleBtn")
+    wide2.wait_for_timeout(400)
+    wide2.click("#settingsToggleBtn")
+    wide2.wait_for_timeout(300)
+    for gid in ("settingsGroupFees", "settingsGroupShopier", "settingsGroupShopify", "settingsGroupEtsy", "settingsGroupFx"):
+        wide2.eval_on_selector(f"#{gid}", "el => { el.open = true; }")
+    wide2.eval_on_selector("#settingsPanel", "el => el.scrollIntoView({block:'start'})")
+    wide2.screenshot(path="shot_settings_wide_dark.png", full_page=True)
+    wide2.close()
+
     browser.close()
 
 print("Ekran goruntuleri kaydedildi.")

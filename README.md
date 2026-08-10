@@ -12,11 +12,15 @@ Build adımı yok. Sunucu tarafı yok. Tüm hesaplama tarayıcıda, `calc.js` i�
 ## Klasördeki dosyalar
 
 ```
-index.html          Form + sonuç kartlarının + diyalogların HTML iskeleti
+index.html          Form + sonuç kartlarının + diyalogların + ayarlar panelinin HTML iskeleti
 styles.css           Görünüm (mobil öncelikli, bkz. aşağıdaki "Tasarım" bölümü)
 calc.js               Tüm oranlar/kargo tabloları/kur + hesaplama mantığı (KH namespace)
+settings.js            Ayarlar panelinin override katmanı — KH'yi localStorage'daki
+                              kullanıcı değerleriyle günceller (KHSettings namespace, bkz. aşağıdaki
+                              "Ayarlar paneli" bölümü)
 storage.js             Kayıtlı ürünler için IndexedDB katmanı (KHStore namespace)
-app.js                 DOM kodu: canlı yeniden hesaplama, kaydırma animasyonları, kayıt akışı
+app.js                 DOM kodu: canlı yeniden hesaplama, kaydırma animasyonları, kayıt akışı,
+                              ayarlar paneli render/olay bağlama
 manifest.json      PWA manifesti (isim, ikonlar, tema rengi, standalone mod)
 sw.js                    Service worker — "ağ öncelikli" önbellekleme (aşağıya bakın)
 icons/                 PWA ikonları (favicon, apple-touch-icon, 192/512, maskable)
@@ -248,6 +252,69 @@ genişletme turu:
   testler artık hem `el.hidden` HEM `getComputedStyle(el).display` kontrol
   ediyor.
 
+## Ayarlar paneli (10 Ağustos 2026)
+
+Sayfanın en altında (sonuç kartlarından sonra, `<footer>`'dan önce) bir "Ayarlar"
+düğmesiyle açılıp kapanan kalıcı bir panel eklendi — **kasıtlı olarak hamburger
+menü YOK, ayrı sekmelere bölünmüş bir yapı da YOK**; tek bir sayfa içi panel,
+altı `<details>` grubuna (Sektör komisyonları, Hizmet bedelleri, Shopier,
+Shopify, Etsy, Döviz kuru) bölünmüş. Amaç: `calc.js`'i elle düzenlemeden —
+oranlar/ücretler değiştikçe veya kullanıcının kendi panelindeki gerçek oran
+farklı olduğunda — kalıcı bir override girilebilmesi.
+
+- **Kapsam:** 31 sektörün tümü için Amazon/Trendyol/n11 komisyon oranı (Amazon'da
+  dilimli sektörler için eşik + iki basamak ayrı ayrı), Trendyol sabit hizmet
+  bedeli, n11 hizmet bedeli yüzdesi, Shopier komisyon/sabit ücret, Shopify'ın
+  plan başına aylık ücreti + dış ödeme sağlayıcı varsayılan oranı, Etsy'nin tüm
+  yüzde/sabit alanları, USD/EUR-TRY kuru. **Kapsam dışı (kasıtlı):** kargo
+  taşıyıcı/desi tabloları (`KH.CARGO`) — bu, ayrı bir öneri turunda kullanıcı
+  tarafından "Kargo hariç" seçilerek bilinçli olarak dışarıda bırakıldı; kargo
+  hâlâ sadece `calc.js`'te veya mevcut platforma-özel "Kargo (₺)" override
+  alanlarında değiştirilebiliyor.
+- **Kalıcılık:** Girilen değerler `localStorage`'da (`kh-settings-v1` anahtarı)
+  saklanıyor — sayfa yenilendiğinde veya tarayıcı kapatılıp açıldığında override'lar
+  otomatik geri yükleniyor. Boş bırakılan bir alan o tekil değeri fabrika
+  varsayılanına döndürüyor (tüm bölümü değil). Her `<details>` grubunun kendi
+  "Sıfırla" düğmesi sadece o bölümü, panel üstündeki genel düğme TÜMÜNÜ sıfırlıyor
+  — ikisi de (mevcut "kayıtlı ürünü sil" akışındaki emsalle tutarlı olarak)
+  `confirm()` diyaloğu göstermiyor, geri alınabilir olduğu için buna gerek
+  duyulmadı (alanı tekrar doldurmak override'ı geri getirir).
+- **Mimari — "override katmanı", `calc.js`'in kendisi değil:** `settings.js`
+  (`KHSettings` namespace) `calc.js`'in dışa aktardığı `KH` nesnesini SAYFA
+  YÜKLENİRKEN bir kez okuyup üzerine `localStorage`'daki seyrek override'ları
+  uyguluyor (`KHSettings.init(KH)`), panel her değiştiğinde de aynı anda hem
+  `localStorage`'a yazıp hem `KH`'yi canlı güncelliyor (`KHSettings.setValue`).
+  `calc.js`'in hesaplama mantığı değişmedi — sadece hangi ORANLARI kullandığı,
+  artık sayfa yüklendiği andaki sabit değerler yerine kullanıcının override'larıyla
+  güncellenmiş olabiliyor.
+- **Bu turda bulunan ve düzeltilen kritik bug:** `calc.js`'teki üç sabit
+  (n11 hizmet bedeli yüzdesi, Trendyol sabit hizmet bedeli, Shopify dış ödeme
+  sağlayıcı varsayılan oranı) `computeAll`/`computeAllFromPrice` içinde `KH.X`
+  yerine doğrudan modül-içi kapanış (closure) değişkeni olarak okunuyordu. `KH`
+  nesnesinin dizi/nesne alanları (`SECTORS`, `SHOPIFY_PLANS`, `SHOPIER`, `ETSY`,
+  `FX`) referans paylaştığı için mutasyon bazlı override doğru çalışıyordu, ama
+  bu üç ilkel (number) alan için `KH.N11_HIZMET_BEDELI_PCT = 20` gibi bir
+  atama hesaplamaya HİÇ yansımıyordu — panel sessizce hiçbir şey yapmıyormuş gibi
+  davranırdı. UI'a bağlamadan önce referans/değer semantiği elle izlenerek
+  (kodu yazmadan) yakalandı; düzeltme, bu üç okumayı `KH.X` önekiyle yapmaya
+  çevirmekten ibaret (bkz. `calc.js` başındaki `KH` tanımının hemen üstündeki
+  yorum). Node ile yeniden üretilip doğrulandı, sonra hem `test.js`'e kalıcı bir
+  regresyon testi hem `scripts/verify_ui.py`'e gerçek-tarayıcı doğrulaması
+  eklendi.
+- **Test kapsamı:** `test.js` içinde `KHSettings`'in kendisi için (düz/kademeli/
+  plan-bazlı override, kısmi override + kalan alanların korunması, boşaltınca
+  fabrikaya dönme, `resetSection`/`resetAll`, `localStorage` round-trip,
+  `Infinity`'nin JSON üzerinden bozulmadan taşınması) ve az önceki bug için
+  paylaşılan gerçek `KH` singleton'ı üzerinden çalışan bir regresyon bloğu var
+  (bilerek bir kopya değil — `computeAll`/`computeAllFromPrice` `calc.js`'in
+  kendi iç `KH`'sine kapanıyor, bir kopyanın mutasyonu bu fonksiyonların
+  okuduğu değeri değiştirmiyor). `scripts/verify_ui.py` panelin açılıp
+  kapanmasını, 31 sektör satırının render'ını, dilimli/düz hücre ayrımını,
+  platformlar arası izolasyonu (bir sektör override'ı SADECE ilgili platformu
+  etkilemeli), rozet/nokta görünürlüğünü, sayfa yenilemesi sonrası kalıcılığı
+  ve bölüm bazlı/genel sıfırlamanın birbirinden bağımsızlığını uçtan uca
+  kontrol ediyor.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -272,6 +339,11 @@ Site bir yere deploy edildikten sonra (bkz. aşağıdaki "Yayınlama" bölümü)
   Apple kısıtlaması.)
 
 ## Oranları / kargo fiyatlarını / kuru güncelleme
+
+Kod dokunmadan, tek bir kullanıcı için kalıcı bir override yeterliyse yukarıdaki
+"Ayarlar paneli" bölümüne bakın (kargo tabloları hariç, hepsi arayüzden
+değiştirilebiliyor). Aşağıdaki, sitenin KENDİ varsayılanlarını (herkes için,
+kaynak kodda) güncellemek isteyenler için:
 
 Hepsi `calc.js` içinde, düz JavaScript objeleri olarak duruyor — build gerekmiyor,
 değiştirip kaydetmeniz yeterli:
@@ -387,7 +459,7 @@ onay kutusuyla hesaba giriyor).
 ## Test etme
 
 ```
-node test.js                      # calc.js mantık testleri (tarayıcısız)
+node test.js                      # calc.js + settings.js (KHSettings) mantık testleri (tarayıcısız)
 python3 -m http.server 8080 &     # UI testi için önce siteyi yerelde servis edin
 python3 scripts/verify_ui.py      # Playwright ile gerçek tarayıcıda uçtan uca test
 python3 scripts/capture_screenshots.py   # (opsiyonel) gözle inceleme için ekran görüntüsü
@@ -399,16 +471,24 @@ değişiklikten sonra ekran görüntülerini gözle de kontrol etmek önerilir.
 
 ## Yayınlama (GitHub / Vercel)
 
-Bu oturumda GitHub veya Vercel bağlantısı aktif değil (bağlı bir connector bulunamadı).
-İki seçenek:
+Yerel bir git deposu var (her tur için ayrı commit, bkz. `git log`) ve
+`origin` uzak adresi `https://github.com/pirus0/kar-hesap.git` olarak
+ayarlı. Bu oturumdan doğrudan `git push` henüz GitHub'a ulaşmadı — Claude'un
+push yapabilmesi için bu depoyu oturuma bağlamanız (GitHub bağlantısı
+kurulduysa dahi, her depo ayrı ayrı yetkilendiriliyor) gerekiyor; bu adım
+Claude'un araçlarından değil, uygulamanın kendi arayüzünden yapılıyor. Depo
+adı/URL'si tahminiydi (`pirus0/kar-hesap`) — GitHub'da gerçek adı farklıysa
+`git remote set-url origin <doğru-url>` ile düzeltip tekrar `git push`
+yeterli.
 
-1. **Elle:** Bu klasörü bilgisayarınıza indirip `git init`, GitHub'da boş bir repo
-   açıp `git remote add origin ...` + `git push` yapın; ardından vercel.com'da
-   "Import Project" ile o repo'yu seçin (framework: "Other" / statik site — build
-   komutu yok, "Output Directory" bu klasörün kökü).
-2. **Connector bağlayarak:** claude.ai/Claude ayarlarından GitHub ve Vercel
-   bağlantılarını etkinleştirirseniz, sonraki bir oturumda repo oluşturma ve deploy
-   işlemini sizin adınıza (onayınızla) yapabilirim.
+1. **Elle:** Bu klasörü bilgisayarınıza indirip (veya bu depoyu clone'layıp)
+   GitHub'da boş bir repo açıp `git push -u origin main` yapın; ardından
+   vercel.com'da "Import Project" ile o repo'yu seçin (framework: "Other" /
+   statik site — build komutu yok, "Output Directory" bu klasörün kökü).
+2. **Depoyu oturuma bağlayarak:** Uygulamanın arayüzünden bu GitHub deposunu
+   oturuma yetkilendirirseniz, sonraki bir mesajda `git push` doğrudan
+   buradan tamamlanabilir; Vercel için de aynı şekilde bir connector
+   bağlanırsa deploy işlemini sizin adınıza (onayınızla) yapabilirim.
 
 Statik dosyalar olduğu için Vercel/Netlify/GitHub Pages gibi herhangi bir statik
 hosting ile de sorunsuz çalışır.

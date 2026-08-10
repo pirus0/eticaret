@@ -500,7 +500,7 @@
       // yoksa paylaşılan (genel piyasa) kargoTRY yön gösterici olarak kullanılır.
       var trendyolKargo = input.trendyolKargoOverrideTRY != null ? input.trendyolKargoOverrideTRY : input.kargoTRY;
       // Komisyondan AYRI, sipariş başına sabit "platform hizmet bedeli" (bkz. dosya başı notu).
-      var hizmetBedeli = input.trendyolHizmetBedeliTRY != null ? input.trendyolHizmetBedeliTRY : TRENDYOL_HIZMET_BEDELI_TRY;
+      var hizmetBedeli = input.trendyolHizmetBedeliTRY != null ? input.trendyolHizmetBedeliTRY : KH.TRENDYOL_HIZMET_BEDELI_TRY;
       var fixed = input.costTRY + trendyolKargo + input.reklamTRY + hizmetBedeli + iadeBeklenenMaliyetTRY;
       var r = solvePrice(fixed, [
         { label: 'Komisyon (yaklaşık)', pct: pct },
@@ -527,7 +527,7 @@
       var fixed = input.costTRY + n11Kargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
       var r = solvePrice(fixed, [
         { label: 'Komisyon (yaklaşık)', pct: pct },
-        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: N11_HIZMET_BEDELI_PCT },
+        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: KH.N11_HIZMET_BEDELI_PCT },
         { label: 'Hedef kâr', pct: input.marginPct }
       ]);
       r.usedPct = pct;
@@ -539,7 +539,7 @@
       var plan = SHOPIFY_PLANS.filter(function (p) { return p.id === input.shopifyPlanId; })[0] || SHOPIFY_PLANS[0];
       // Shopify Payments Türkiye'de yok — bunun yerine kullanıcının kendi yerel
       // ödeme sağlayıcısının oranı + Shopify'ın "dış sağlayıcı" ek ücreti toplanıyor.
-      var gatewayPct = input.shopifyGatewayPct != null ? input.shopifyGatewayPct : SHOPIFY_GATEWAY_DEFAULT_PCT;
+      var gatewayPct = input.shopifyGatewayPct != null ? input.shopifyGatewayPct : KH.SHOPIFY_GATEWAY_DEFAULT_PCT;
       var gatewayFixedTRY = input.shopifyGatewayFixedTRY || 0;
       var monthlySubTRY = 0;
       if (input.shopifyMonthlyUnits && input.shopifyMonthlyUnits > 0) {
@@ -666,7 +666,7 @@
         return;
       }
       var trendyolKargo = input.trendyolKargoOverrideTRY != null ? input.trendyolKargoOverrideTRY : input.kargoTRY;
-      var hizmetBedeli = input.trendyolHizmetBedeliTRY != null ? input.trendyolHizmetBedeliTRY : TRENDYOL_HIZMET_BEDELI_TRY;
+      var hizmetBedeli = input.trendyolHizmetBedeliTRY != null ? input.trendyolHizmetBedeliTRY : KH.TRENDYOL_HIZMET_BEDELI_TRY;
       var fixed = input.costTRY + trendyolKargo + input.reklamTRY + hizmetBedeli + iadeBeklenenMaliyetTRY;
       var r = marginFromPrice(fixed, [{ label: 'Komisyon (yaklaşık)', pct: pct }], priceTRY);
       r.usedPct = pct;
@@ -685,7 +685,7 @@
       var fixed = input.costTRY + n11Kargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
       var r = marginFromPrice(fixed, [
         { label: 'Komisyon (yaklaşık)', pct: pct },
-        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: N11_HIZMET_BEDELI_PCT }
+        { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: KH.N11_HIZMET_BEDELI_PCT }
       ], priceTRY);
       r.usedPct = pct;
       results.n11 = r;
@@ -693,7 +693,7 @@
 
     (function () { // Shopify
       var plan = SHOPIFY_PLANS.filter(function (p) { return p.id === input.shopifyPlanId; })[0] || SHOPIFY_PLANS[0];
-      var gatewayPct = input.shopifyGatewayPct != null ? input.shopifyGatewayPct : SHOPIFY_GATEWAY_DEFAULT_PCT;
+      var gatewayPct = input.shopifyGatewayPct != null ? input.shopifyGatewayPct : KH.SHOPIFY_GATEWAY_DEFAULT_PCT;
       var gatewayFixedTRY = input.shopifyGatewayFixedTRY || 0;
       var monthlySubTRY = 0;
       if (input.shopifyMonthlyUnits && input.shopifyMonthlyUnits > 0) {
@@ -740,6 +740,16 @@
     return results;
   }
 
+  // ÖNEMLİ (bkz. settings.js başlık notu, 10 Ağustos 2026): FX/SECTORS/
+  // SHOPIFY_PLANS/SHOPIER/ETSY nesne-değerli oldukları için burada bir
+  // REFERANS aktarılıyor — dışarıdan (settings.js) "KH.SECTORS[i].x = ..."
+  // gibi bir mutasyon computeAll()'ın kendi iç değişkeninin de AYNI nesne
+  // olduğu için otomatik yansır. Ama SHOPIFY_GATEWAY_DEFAULT_PCT/
+  // TRENDYOL_HIZMET_BEDELI_TRY/N11_HIZMET_BEDELI_PCT birer TEKİL SAYI
+  // olduğundan burada sadece bir DEĞER KOPYASI aktarılır — bu yüzden
+  // computeAll()/computeAllFromPrice() bu üçünü BİLEREK "KH.X" öneki ile
+  // (kendi closure değişkeni yerine) okuyor, aksi halde dışarıdan bir
+  // ayarlar-katmanı mutasyonu sessizce hiçbir etki yaratmazdı.
   var KH = {
     FX: FX,
     CARGO: CARGO,

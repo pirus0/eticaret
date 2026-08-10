@@ -32,7 +32,10 @@
     'savedListBtn', 'savedCount', 'saveTrigger',
     'saveDialog', 'saveForm', 'saveDialogClose', 'saveDialogCancel',
     'saveName', 'savePlatform', 'saveImageInput', 'saveImageThumb', 'saveSnapshot',
-    'savedPanel', 'savedPanelClose', 'savedEmpty', 'savedList'].forEach(function (id) {
+    'savedPanel', 'savedPanelClose', 'savedEmpty', 'savedList',
+    'settingsToggleBtn', 'settingsToggleDot', 'settingsPanel', 'settingsResetAllBtn',
+    'settingsSectorsBody', 'settingsFeesFields', 'settingsShopierFields',
+    'settingsShopifyFields', 'settingsEtsyFields', 'settingsFxFields'].forEach(function (id) {
     el[id] = document.getElementById(id);
   });
 
@@ -690,7 +693,263 @@
     });
   }
 
+  // --- Ayarlar paneli (KHSettings arayüzü) ---
+  // Burada SADECE DOM inşası + KH/overrides'ı okuyup formu doldurma var —
+  // hesaplama mantığına dair hiçbir şey yok. Bir alan değiştiğinde
+  // KHSettings.setValue() çağrılıyor (KH'yi mutate edip localStorage'a
+  // yazıyor), sonra recalc() zaten var olan genel hesaplama akışını tetikliyor.
+
+  function fmtSettingsDefault(n) {
+    if (n == null) return '—';
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function readSettingsOverride(section, key, subKey) {
+    var ov = KHSettings.getOverrides();
+    var bucket = ov[section];
+    if (!bucket) return null;
+    var v = subKey != null ? (bucket[key] != null ? bucket[key][subKey] : null) : bucket[key];
+    return v == null ? null : v;
+  }
+
+  // Tek bir <input>: section/key/subKey data-özniteliklerine, varsayılanı
+  // placeholder olarak, kayıtlı bir override varsa onu value olarak taşır.
+  // subKey=null olan alanlar (fees/shopier/etsy/fx'in çoğu) düz section->key
+  // yoluyla saklanır; sektör tablosu ve Shopify planları gibi 2 seviye
+  // gerektirenler subKey kullanır (bkz. settings.js setValue).
+  function createSettingsInput(section, key, subKey, defaultValue, opts) {
+    opts = opts || {};
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.inputMode = 'decimal';
+    input.min = '0';
+    input.step = opts.step || '0.01';
+    if (opts.max != null) input.max = String(opts.max);
+    input.placeholder = fmtSettingsDefault(defaultValue);
+    input.setAttribute('data-section', section);
+    input.setAttribute('data-key', key);
+    if (subKey != null) input.setAttribute('data-subkey', subKey);
+    if (opts.ariaLabel) input.setAttribute('aria-label', opts.ariaLabel);
+    var existing = readSettingsOverride(section, key, subKey);
+    if (existing != null) input.value = existing;
+    var handler = function () {
+      KHSettings.setValue(KH, section, key, subKey, input.value);
+      updateSettingsModifiedState();
+      recalc();
+    };
+    input.addEventListener('input', handler);
+    input.addEventListener('change', handler);
+    return input;
+  }
+
+  // section->key->subKey'e karşılık gelen tam bir <div class="field"> (label +
+  // input + opsiyonel ipucu) — sektör tablosu DIŞINDAKİ tüm ayar alanları bunu
+  // kullanıyor (tablo hücreleri yer kısıtlı olduğu için doğrudan
+  // createSettingsInput kullanıyor, kendi label'ı yok, sütun başlığı yeterli).
+  function appendSettingsField(container, section, key, subKey, labelText, defaultValue, opts) {
+    opts = opts || {};
+    var wrap = document.createElement('div');
+    wrap.className = 'field';
+    var uid = 'set_' + section + '_' + key + (subKey ? '_' + subKey : '');
+    var label = document.createElement('label');
+    label.setAttribute('for', uid);
+    label.textContent = labelText;
+    wrap.appendChild(label);
+    var input = createSettingsInput(section, key, subKey, defaultValue, opts);
+    input.id = uid;
+    wrap.appendChild(input);
+    if (opts.hint) {
+      var hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.textContent = opts.hint;
+      wrap.appendChild(hint);
+    }
+    container.appendChild(wrap);
+    return input;
+  }
+
+  function renderSettingsSectorsTable() {
+    var defaults = KHSettings.getDefaults();
+    el.settingsSectorsBody.innerHTML = '';
+    KH.SECTORS.forEach(function (s) {
+      var d = defaults.sectors[s.id];
+      var tr = document.createElement('tr');
+
+      var th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = s.label;
+      tr.appendChild(th);
+
+      var tdAmazon = document.createElement('td');
+      if (d.amazon && typeof d.amazon === 'object' && d.amazon.tiers) {
+        var tiered = document.createElement('div');
+        tiered.className = 'settings-tiered';
+        tiered.appendChild(createSettingsInput('sectors', s.id, 'amazonThreshold', d.amazon.tiers[0][0],
+          { step: '1', ariaLabel: s.label + ' Amazon eşik tutarı (₺)' }));
+        tiered.appendChild(createSettingsInput('sectors', s.id, 'amazonLow', d.amazon.tiers[0][1],
+          { step: '0.1', max: 90, ariaLabel: s.label + ' Amazon eşik altı oran (%)' }));
+        tiered.appendChild(createSettingsInput('sectors', s.id, 'amazonHigh', d.amazon.tiers[1][1],
+          { step: '0.1', max: 90, ariaLabel: s.label + ' Amazon eşik üstü oran (%)' }));
+        tdAmazon.appendChild(tiered);
+      } else {
+        tdAmazon.appendChild(createSettingsInput('sectors', s.id, 'amazon', d.amazon,
+          { step: '0.1', max: 90, ariaLabel: s.label + ' Amazon komisyonu (%)' }));
+      }
+      tr.appendChild(tdAmazon);
+
+      var tdTrendyol = document.createElement('td');
+      tdTrendyol.appendChild(createSettingsInput('sectors', s.id, 'trendyol', d.trendyol,
+        { step: '0.1', max: 90, ariaLabel: s.label + ' Trendyol komisyonu (%)' }));
+      tr.appendChild(tdTrendyol);
+
+      var tdN11 = document.createElement('td');
+      tdN11.appendChild(createSettingsInput('sectors', s.id, 'n11', d.n11,
+        { step: '0.1', max: 90, ariaLabel: s.label + ' n11 komisyonu (%)' }));
+      tr.appendChild(tdN11);
+
+      el.settingsSectorsBody.appendChild(tr);
+    });
+  }
+
+  function renderSettingsFeesFields() {
+    var d = KHSettings.getDefaults().fees;
+    el.settingsFeesFields.innerHTML = '';
+    appendSettingsField(el.settingsFeesFields, 'fees', 'trendyolHizmetBedeliTRY', null,
+      'Trendyol hizmet bedeli (₺)', d.trendyolHizmetBedeliTRY,
+      { hint: 'Komisyondan ayrı, sipariş başına sabit ücret.' });
+    appendSettingsField(el.settingsFeesFields, 'fees', 'n11HizmetBedeliPct', null,
+      'n11 pazarlama + pazaryeri hizmet bedeli (%)', d.n11HizmetBedeliPct,
+      { step: '0.01', hint: 'Komisyondan ayrı, tüm kategorilerde sabit oran.' });
+  }
+
+  function renderSettingsShopierFields() {
+    var d = KHSettings.getDefaults().shopier;
+    el.settingsShopierFields.innerHTML = '';
+    appendSettingsField(el.settingsShopierFields, 'shopier', 'commissionPct', null,
+      'Komisyon (%)', d.commissionPct,
+      { hint: 'Aylık hacme göre kademeli — panelinizdeki gerçek oranı girin.' });
+    appendSettingsField(el.settingsShopierFields, 'shopier', 'fixedTRY', null,
+      'İşlem başına sabit ücret (₺)', d.fixedTRY);
+  }
+
+  function renderSettingsShopifyFields() {
+    var d = KHSettings.getDefaults().shopify;
+    el.settingsShopifyFields.innerHTML = '';
+    appendSettingsField(el.settingsShopifyFields, 'shopify', 'gatewayDefaultPct', null,
+      'Varsayılan ödeme sağlayıcı oranı (%)', d.gatewayDefaultPct,
+      { hint: 'Ana formdaki alanın sayfa açılışındaki ilk değeri.' });
+    KH.SHOPIFY_PLANS.forEach(function (p) {
+      var dp = d.plans[p.id];
+      var heading = document.createElement('div');
+      heading.className = 'settings-plan-heading';
+      heading.textContent = p.label;
+      el.settingsShopifyFields.appendChild(heading);
+      appendSettingsField(el.settingsShopifyFields, 'shopify', 'plan_' + p.id, 'monthlyUSD',
+        'Aylık ücret ($)', dp.monthlyUSD, { step: '1' });
+      appendSettingsField(el.settingsShopifyFields, 'shopify', 'plan_' + p.id, 'externalSurchargePct',
+        'Dış sağlayıcı ek ücreti (%)', dp.externalSurchargePct, { step: '0.1' });
+    });
+  }
+
+  function renderSettingsEtsyFields() {
+    var d = KHSettings.getDefaults().etsy;
+    el.settingsEtsyFields.innerHTML = '';
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'transactionPct', null, 'İşlem komisyonu (%)', d.transactionPct, { step: '0.1' });
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'listingFeeUSD', null, 'Liste ücreti ($)', d.listingFeeUSD);
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'regulatoryOperatingFeePct', null, 'Düzenleyici işletim ücreti — TR (%)', d.regulatoryOperatingFeePct);
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'defaultPaymentProcessingPct', null, 'Ödeme işleme (tahmini) (%)', d.defaultPaymentProcessingPct, { step: '0.1' });
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'currencyConversionPct', null, 'Para birimi çevrim ücreti (%)', d.currencyConversionPct, { step: '0.1' });
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteUnderPct', null, 'Offsite Ads — eşik altı (%)', d.offsiteUnderPct, { step: '0.1' });
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteOverPct', null, 'Offsite Ads — eşik üstü (%)', d.offsiteOverPct, { step: '0.1' });
+    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteThresholdUSD', null, 'Offsite Ads eşiği ($/yıl)', d.offsiteThresholdUSD, { step: '1' });
+  }
+
+  function renderSettingsFxFields() {
+    var d = KHSettings.getDefaults().fx;
+    el.settingsFxFields.innerHTML = '';
+    appendSettingsField(el.settingsFxFields, 'fx', 'USD_TRY', null, 'USD/TRY', d.USD_TRY);
+    appendSettingsField(el.settingsFxFields, 'fx', 'EUR_TRY', null, 'EUR/TRY', d.EUR_TRY);
+  }
+
+  // Bir bölümü/tüm paneli sıfırladıktan sonra DOM'daki input değerlerini
+  // (artık override kalmadığı için boş olmalılar) günceller — render*
+  // fonksiyonlarını yeniden çağırmak (innerHTML'i sıfırdan kurmak) yerine
+  // mevcut input'ları yerinde günceller, böylece <details> açık/kapalı
+  // durumu ve odak/scroll konumu korunur.
+  function refreshSettingsInputs(sectionFilter) {
+    var inputs = el.settingsPanel.querySelectorAll('input[data-section]');
+    inputs.forEach(function (input) {
+      var section = input.getAttribute('data-section');
+      if (sectionFilter && section !== sectionFilter) return;
+      var key = input.getAttribute('data-key');
+      var subKey = input.getAttribute('data-subkey');
+      var v = readSettingsOverride(section, key, subKey);
+      input.value = v == null ? '' : v;
+    });
+  }
+
+  function updateSettingsModifiedState() {
+    var inputs = el.settingsPanel.querySelectorAll('input[data-section]');
+    inputs.forEach(function (input) {
+      var section = input.getAttribute('data-section');
+      var key = input.getAttribute('data-key');
+      var subKey = input.getAttribute('data-subkey');
+      var has = readSettingsOverride(section, key, subKey) != null;
+      input.classList.toggle('is-modified', has);
+      var fieldWrap = input.closest('.field');
+      if (fieldWrap) fieldWrap.classList.toggle('is-modified', has);
+    });
+    el.settingsPanel.querySelectorAll('[data-badge-section]').forEach(function (badge) {
+      badge.hidden = !KHSettings.sectionHasOverrides(badge.getAttribute('data-badge-section'));
+    });
+    el.settingsToggleDot.hidden = !KHSettings.hasAnyOverrides();
+  }
+
+  function toggleSettingsPanel() {
+    var willOpen = el.settingsPanel.hidden;
+    el.settingsPanel.hidden = !willOpen;
+    el.settingsToggleBtn.setAttribute('aria-expanded', String(willOpen));
+    if (willOpen) el.settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function initSettingsPanel() {
+    KHSettings.init(KH);
+    renderSettingsSectorsTable();
+    renderSettingsFeesFields();
+    renderSettingsShopierFields();
+    renderSettingsShopifyFields();
+    renderSettingsEtsyFields();
+    renderSettingsFxFields();
+    updateSettingsModifiedState();
+
+    el.settingsToggleBtn.addEventListener('click', toggleSettingsPanel);
+
+    el.settingsResetAllBtn.addEventListener('click', function () {
+      KHSettings.resetAll(KH);
+      refreshSettingsInputs(null);
+      updateSettingsModifiedState();
+      recalc();
+    });
+
+    // Bölüm bazlı "Bu bölümü sıfırla" düğmeleri: her <details> kendi
+    // düğmesini üretiyor, tek tek dinleyici eklemek yerine panel üzerinde
+    // tek bir delegasyon yeterli.
+    el.settingsPanel.addEventListener('click', function (e) {
+      var btn = e.target.closest('.settings-reset-section');
+      if (!btn) return;
+      var section = btn.getAttribute('data-reset-section');
+      KHSettings.resetSection(KH, section);
+      refreshSettingsInputs(section);
+      updateSettingsModifiedState();
+      recalc();
+    });
+  }
+
   function init() {
+    // Ayarlar panelinden ÖNCE hiçbir şey KH'yi okumamalı — KHSettings.init()
+    // kullanıcının kayıtlı düzeltmelerini KH'nin canlı nesnelerine burada,
+    // ilk hesaplamadan önce uyguluyor (bkz. settings.js başlık notu).
+    initSettingsPanel();
     buildResultCards();
     populateSelects();
     renderNotes();
@@ -707,9 +966,13 @@
     // readInput() onun değerini hiç okumuyor (sadece el.sector.value'yu
     // etkiliyor), bu yüzden buraya recalc bağlamak her tuş vuruşunda
     // gereksiz bir hesaplama daha yapar. Kendi işleyicisi aşağıda.
+    // #settingsPanel içindeki input'lar da HARİÇ: bunlar KHSettings.setValue()
+    // + recalc()'i KENDİ işleyicisinden (createSettingsInput) zaten çağırıyor;
+    // burada da bağlarsak her tuş vuruşunda recalc() iki kez tetiklenirdi.
     var inputs = document.querySelectorAll('input, select');
     inputs.forEach(function (inp) {
       if (inp === el.sectorSearch) return;
+      if (inp.closest('#settingsPanel')) return;
       inp.addEventListener('input', recalc);
       inp.addEventListener('change', recalc);
     });

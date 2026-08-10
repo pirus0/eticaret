@@ -1203,3 +1203,249 @@ summary:focus-visible {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* --- Ayarlar paneli (10 Ağustos 2026) ---
+   .layout DIŞINDA, .page İÇİNDE bilinçli olarak konumlandı: .layout ≥900px'te
+   2 sütunlu bir grid'e dönüyor (bkz. yukarısı), o grid'e 3. bir doğrudan çocuk
+   eklemek örtük satıra sarıp sadece ilk sütun genişliğine (360-460px) sıkışan
+   bir kutu üretirdi. .page'in dışında olduğu için tam genişlik + mevcut
+   responsive .page max-width kademelerinden (720/1180/1440px) otomatik
+   yararlanıyor — ayrı bir breakpoint tanımlamaya gerek yok. */
+.settings-section {
+  margin-top: var(--space-6);
+}
+
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.settings-toggle svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Kullanıcının en az bir ayarı değiştirdiğini, panel KAPALIYKEN de gösteren
+   küçük nokta — .icon-btn .badge'deki "rozet üstte-sağda" fikriyle aynı aile,
+   ama burada bir sayı değil sade bir "değişiklik var" işareti yeterli. */
+.settings-toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-trendyol);
+  flex-shrink: 0;
+}
+
+.settings-panel {
+  margin-top: var(--space-4);
+}
+
+.settings-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-panel-head h2 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  margin-bottom: var(--space-2);
+}
+
+.settings-panel-head .settings-reset-all {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Alt bölümler details.advanced ile AYNI aileden ama kendi sınıfında —
+   details.advanced'ın kenarlık/özet stilini büyük ölçüde miras alıyor,
+   sadece rozet + reset düğmesi için yer açıyor. */
+.settings-group {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.settings-group summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-group[open] summary {
+  margin-bottom: var(--space-4);
+}
+
+.settings-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-trendyol);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.settings-reset-section {
+  align-self: flex-start;
+  padding: 6px var(--space-3);
+  font-size: 0.78rem;
+}
+
+/* --- Sektör tablosu --- */
+
+.settings-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.settings-table th,
+.settings-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.settings-table thead th {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+}
+
+.settings-table tbody tr:last-child td,
+.settings-table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.settings-table th[scope="row"] {
+  font-weight: 500;
+  color: var(--ink);
+  white-space: normal;
+  min-width: 160px;
+}
+
+.settings-table .settings-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-table input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  width: 78px;
+  padding: 7px 8px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.settings-table input::-webkit-outer-spin-button,
+.settings-table input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.settings-table input:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(23, 22, 15, 0.1);
+}
+
+.settings-table input.is-modified {
+  border-color: var(--accent-trendyol);
+}
+
+/* Kademeli (Amazon: taki/kozmetik/gıda) sektör hücreleri: eşik + iki oran,
+   3 küçük alan yan yana. Diğer hücrelerdeki tek input'tan ayırt edilsin diye
+   ayrı bir sınıf. */
+.settings-tiered {
+  display: flex;
+  gap: 4px;
+}
+
+.settings-tiered input {
+  width: 56px;
+}
+
+.settings-tiered input[data-subkey="threshold"] {
+  width: 64px;
+}
+
+/* --- Sabit ücret / Shopier / Shopify / Etsy / FX alan grupları ---
+   .field'ın kendi görünümünü (label + input + hint) aynen kullanıyor, sadece
+   ~120 alanın tek sütunda uzayıp gitmemesi için responsive bir grid'e alıyor. */
+.settings-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 560px) {
+  .settings-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.settings-fields .field {
+  margin-bottom: 0;
+}
+
+.settings-fields .field.is-modified label {
+  color: var(--accent-trendyol);
+}
+
+.settings-fields .field.is-modified input {
+  border-color: var(--accent-trendyol);
+}
+
+/* Shopify plan alt başlığı: 3 plan (basic/grow/advanced) kendi mini başlığı
+   altında 2'şer alan (aylık ücret + dış sağlayıcı ek yüzdesi) gösteriyor. */
+.settings-plan-heading {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: var(--space-2);
+}
+
+.settings-plan-heading:first-child {
+  margin-top: 0;
+}
