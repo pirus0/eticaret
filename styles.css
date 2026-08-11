@@ -468,6 +468,78 @@ body.is-scrolled .topbar .brand {
   color: var(--muted);
 }
 
+/* Bilgi butonu (i) + popover -- "aşağıda sabit bir açıklama panosu" yerine
+   talep üzerine açılan kompakt bir ipucu (bkz. iadeMaliyet alanı). Native
+   Popover API kullanıyor (evergreen tarayıcılarda 2023'ten beri destekleniyor,
+   bu uygulamanın sıfır-bağımlılık felsefesiyle tutarlı) -- dış tıklama/Esc ile
+   kapanma, odak yönetimi tarayıcı tarafından otomatik sağlanıyor. Konumlama
+   (butonun hemen altına, taşarsa düzeltilerek) app.js initInfoPopovers()'da.
+*/
+.info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+  padding: 0;
+}
+
+.info-btn:hover,
+.info-btn:focus-visible {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.info-popover {
+  margin: 0;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(23, 22, 15, 0.18);
+}
+
+.info-popover::backdrop {
+  background: transparent;
+}
+
+/* "Ek Giderler" artık açılır/kapanır bir <details> -- başlık (h2) görsel
+   olarak AYNEN korunuyor (bkz. .form-card h2), sadece tıklanabilirlik ve
+   varsayılan üçgen gösterge ekleniyor (diğer tüm details/summary'lerle
+   aynı desen -- ör. details.advanced, details.notes). */
+.field-group.ek-giderler > summary {
+  cursor: pointer;
+}
+
+/* ONEMLI: tarayicinin "details kapaliyken ozet-disi icerigi gizle" UA kurali
+   (details:not([open]) > *:not(summary) { display: none }) normal-oncelikli
+   bir UA kurali -- yazar (author) katmanindaki HERHANGI bir normal-oncelikli
+   display bildirimi (ozellikle .field { display: flex }, bkz. yukarida) onu
+   ozgunluk farketmeksizin EZER (author > UA, kaskad kokenine gore). Bu yuzden
+   ayni etkiyi burada ACIKCA tekrar kuruyoruz -- aksi halde details kapaninca
+   JS acilis/kapanis yuksekligi (offsetHeight) dogru kucuk deger olsa da
+   overflow:visible'a donunce alanlar kutunun disina tasip GORUNMEYE devam
+   ederdi (10/11 Agustos'taki [hidden]{display:none !important} hatasiyla
+   AYNI aile -- bkz. index.html/app.js/scripts/verify_ui.py'deki o notlar). */
+.field-group.ek-giderler:not([open]) > .field {
+  display: none;
+}
+
 /* .field-hint bazen bir input'a değil doğrudan .field-group/.platform-group'a
    bağlı, tek başına bir kapsam notu olarak kullanılıyor (ör. "bu tutar X
    senaryosunu varsayar"). O durumda .field'ın flex-gap'inden yararlanamadığı
@@ -1489,6 +1561,12 @@ summary:focus-visible {
 
 .settings-table input.is-modified {
   border-color: var(--accent-trendyol);
+}
+
+/* opts.title verilen ayar alanları (ör. n11 tahmini oranlar) -- kesikli
+   kenarlık, üzerine gelince görünen title tooltip'i için görsel bir ipucu. */
+.settings-table input.has-title-hint {
+  border-style: dashed;
 }
 
 /* Kademeli (Amazon: taki/kozmetik/gıda) sektör hücreleri: eşik + iki oran,

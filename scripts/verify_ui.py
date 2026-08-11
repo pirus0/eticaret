@@ -238,13 +238,92 @@ def main():
         page.fill("#shopierOverride", "")
         page.wait_for_timeout(200)
 
-        # n11 verisi olmayan bir sektorde (saat) karti "unavailable" gostermeli.
-        page.select_option("#sector", "saat")
+        # n11 verisi olmayan bir sektorde (hediyeKarti) karti "unavailable" gostermeli.
+        # 11 Agustos 2026 N11 sektor genisletmesinden SONRA "saat" gibi eski veri-yok
+        # sektorlerinin cogu artik tahmini bir n11 oranina sahip (asagidaki yeni test
+        # blogu) -- hediyeKarti/diger ise 3 kaynaktan ikisinde de veri olmadigi icin
+        # hala tahminsiz null (bkz. calc.js SECTORS basligi).
+        page.select_option("#sector", "hediyeKarti")
         page.wait_for_timeout(200)
         n11_unavailable = page.eval_on_selector(".result-card.n11", "el => el.classList.contains('is-unavailable')")
         check("n11 verisi olmayan sektorde n11 karti 'unavailable' isaretleniyor", n11_unavailable)
+
+        # ============== N11 SEKTOR GENISLETMESI: tahmini oranlar (11 Agustos 2026,
+        # kullanici talebi -- "Bahce, Elektrikli El Aletleri" ozelinde bildirilen
+        # bosluk artik ornek/tahmini bir fiyat gosteriyor). ==============
+        page.select_option("#sector", "bahce")
+        page.wait_for_timeout(200)
+        bahce_n11_unavailable = page.eval_on_selector(".result-card.n11", "el => el.classList.contains('is-unavailable')")
+        check("Bahce, Elektrikli El Aletleri sektorunde n11 karti ARTIK 'unavailable' DEGIL", not bahce_n11_unavailable, bahce_n11_unavailable)
+        bahce_n11_price = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        check("Bahce sektorunde n11 karti gercek bir fiyat gosteriyor", bahce_n11_price.strip() not in ("", "—"), bahce_n11_price)
+        bahce_n11_pct_html = page.eval_on_selector(".result-card.n11 .pct", "el => el.innerHTML")
+        check("Bahce sektorunde n11 orani 'tahmini' rozetiyle isaretleniyor", "tahmini" in bahce_n11_pct_html.lower(), bahce_n11_pct_html)
+        bahce_n11_pct_text = page.eval_on_selector(".result-card.n11 .pct", "el => el.textContent")
+        check("Bahce sektorunde n11 kullanilan orani %14.7 gosteriyor", "14.7" in bahce_n11_pct_text or "14,7" in bahce_n11_pct_text, bahce_n11_pct_text)
+
+        # Kaynakli (sourced) bir sektorde (giyim) 'tahmini' rozeti GORUNMEMELI.
         page.select_option("#sector", "giyim")
         page.wait_for_timeout(200)
+        giyim_n11_pct_html = page.eval_on_selector(".result-card.n11 .pct", "el => el.innerHTML")
+        check("Kaynakli n11 verisi olan sektorde (giyim) 'tahmini' rozeti YOK", "tahmini" not in giyim_n11_pct_html.lower(), giyim_n11_pct_html)
+
+        # ============== EK GIDERLER: acilir/kapanir panel (11 Agustos 2026,
+        # kullanici talebi -- "cat diye aciliyor, anlamiyorum") ==============
+        ek_giderler_initially_open = page.eval_on_selector("details.ek-giderler", "el => el.open")
+        check("Ek Giderler basta ACIK (mevcut kullanicilar alanlari kaybetmesin)", ek_giderler_initially_open)
+
+        page.click("details.ek-giderler > summary")
+        page.wait_for_timeout(350)  # WAAPI animasyonun (200ms) bitmesini bekle
+        ek_giderler_closed = page.eval_on_selector("details.ek-giderler", "el => el.open")
+        check("Ek Giderler basligina tiklayinca KAPANIYOR (animasyon sonrasi open=false)", not ek_giderler_closed, ek_giderler_closed)
+        ads_visible_when_closed = page.eval_on_selector("#ads", "el => el.offsetParent !== null")
+        check("Ek Giderler kapaliyken icindeki alanlar (ör. #ads) GORUNMUYOR", not ads_visible_when_closed)
+
+        page.click("details.ek-giderler > summary")
+        page.wait_for_timeout(350)
+        ek_giderler_reopened = page.eval_on_selector("details.ek-giderler", "el => el.open")
+        check("Ek Giderler basligina tekrar tiklayinca ACILIYOR", ek_giderler_reopened)
+        ads_visible_when_open = page.eval_on_selector("#ads", "el => el.offsetParent !== null")
+        check("Ek Giderler aciliyken icindeki alanlar tekrar GORUNUYOR", ads_visible_when_open)
+
+        # ============== BILGI BUTONU: iade aciklamasi (11 Agustos 2026,
+        # "asagida sabit panel yerine information butonu" talebi) ==============
+        iade_popover_open_before = page.eval_on_selector("#iadeMaliyetInfo", "el => el.matches(':popover-open')")
+        check("Iade bilgi popover'i basta KAPALI", not iade_popover_open_before)
+        page.click("button[popovertarget='iadeMaliyetInfo']")
+        page.wait_for_timeout(150)
+        iade_popover_open_after = page.eval_on_selector("#iadeMaliyetInfo", "el => el.matches(':popover-open')")
+        check("Bilgi butonuna tiklayinca popover ACILIYOR", iade_popover_open_after)
+        iade_popover_text = page.eval_on_selector("#iadeMaliyetInfo", "el => el.textContent")
+        check("Popover metninde iade kargosu aciklamasi var", "iade kargosu satıcıya ait" in iade_popover_text, iade_popover_text[:80])
+        btn_box = page.eval_on_selector("button[popovertarget='iadeMaliyetInfo']", "el => { var r = el.getBoundingClientRect(); return {top: r.top, left: r.left, bottom: r.bottom}; }")
+        pop_box = page.eval_on_selector("#iadeMaliyetInfo", "el => { var r = el.getBoundingClientRect(); return {top: r.top, left: r.left, bottom: r.bottom, width: r.width}; }")
+        # Normalde butonun HEMEN ALTINA konumlanir; dikey alan yetmezse (ör.
+        # buton ekranin cok asagisindaysa) app.js kasitli olarak butonun
+        # USTUNE alir (bkz. initInfoPopovers 'toggle' düzeltmesi) -- bu yuzden
+        # tek yonlu degil, IKI YONLU (bitisik) konumlanmayi dogruluyoruz.
+        pop_adjacent_to_btn = (pop_box["top"] >= btn_box["bottom"] - 1) or (pop_box["bottom"] <= btn_box["top"] + 1)
+        check("Popover butonun hemen alt ya da ustune (tasarsa) bitisik konumlaniyor",
+              pop_adjacent_to_btn, f"btn={btn_box} pop={pop_box}")
+        check("Popover genisligi viewport'a sigacak sekilde ust sinirda (<=300px)", pop_box["width"] <= 300, pop_box["width"])
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+        iade_popover_open_dismissed = page.eval_on_selector("#iadeMaliyetInfo", "el => el.matches(':popover-open')")
+        check("Escape tusuyla popover KAPANIYOR (light-dismiss)", not iade_popover_open_dismissed)
+
+        # ============== PREFERS-REDUCED-MOTION: details ANINDA acilip
+        # kapanmali (JS kendi kontrolunu yapiyor, bkz. app.js initDetailsAnimation
+        # -- CSS'teki @media kurali JS-tetiklemeli WAAPI'yi yakalayamadigi icin
+        # ayri bir kontrol gerekiyordu). ==============
+        reduced_page = browser.new_page(viewport={"width": 390, "height": 844})
+        reduced_page.emulate_media(reduced_motion="reduce")
+        reduced_page.goto(f"{BASE}/index.html", wait_until="networkidle")
+        reduced_page.click("details.dims > summary")
+        reduced_page.wait_for_timeout(30)  # WAAPI kullanilsaydi 200ms surerdi
+        dims_open_reduced = reduced_page.eval_on_selector("details.dims", "el => el.open")
+        check("prefers-reduced-motion: reduce iken details ANINDA aciliyor (WAAPI atlaniyor)", dims_open_reduced)
+        reduced_page.close()
 
         # ============== SEKTOR ARAMA ==============
         # Arama, <select>'in secenek listesini degistirmeden ("filtrelemeden")
@@ -651,6 +730,18 @@ def main():
 
         diger_hepsiburada_placeholder = page.eval_on_selector("input[data-section='sectors'][data-key='diger'][data-subkey='hepsiburada']", "e => e.placeholder")
         check("Eslesmeyen sektorde (diger) Hepsiburada hucresi '-' placeholder gosteriyor (yine de duzenlenebilir)", diger_hepsiburada_placeholder == "—", diger_hepsiburada_placeholder)
+
+        # 11 Agustos 2026 N11 sektor genisletmesi: tahmini n11 hucreleri (bkz.
+        # calc.js SECTORS n11Estimated + app.js createSettingsInput opts.title)
+        # kesikli kenarlik sinifi + title ipucu almali; kaynakli hucrelerde YOK.
+        bahce_n11_input_title = page.eval_on_selector("input[data-section='sectors'][data-key='bahce'][data-subkey='n11']", "el => el.title")
+        check("Bahce n11 ayar hucresinde tahmini oldugunu belirten title ipucu var", len(bahce_n11_input_title.strip()) > 0, bahce_n11_input_title)
+        bahce_n11_input_class = page.eval_on_selector("input[data-section='sectors'][data-key='bahce'][data-subkey='n11']", "el => el.className")
+        check("Bahce n11 ayar hucresi 'has-title-hint' sinifini aliyor (kesikli kenarlik)", "has-title-hint" in bahce_n11_input_class, bahce_n11_input_class)
+        giyim_n11_input_title = page.eval_on_selector("input[data-section='sectors'][data-key='giyim'][data-subkey='n11']", "el => el.title")
+        check("Kaynakli sektorde (giyim) n11 ayar hucresinde title ipucu YOK", giyim_n11_input_title.strip() == "", giyim_n11_input_title)
+        hediyeKarti_n11_placeholder = page.eval_on_selector("input[data-section='sectors'][data-key='hediyeKarti'][data-subkey='n11']", "e => e.placeholder")
+        check("Tahminsiz null sektorde (hediyeKarti) n11 hucresi '-' placeholder gosteriyor", hediyeKarti_n11_placeholder == "—", hediyeKarti_n11_placeholder)
 
         taki_amazon_inputs = page.eval_on_selector_all(
             "input[data-section='sectors'][data-key='taki'].settings-tiered, input[data-section='sectors'][data-key='taki'][data-subkey^='amazon']",

@@ -244,9 +244,28 @@
   // --- SEKTÖR / KOMİSYON TABLOSU (Amazon resmi + Trendyol/n11 yaklaşık) ---
   // amazon: sayı (düz %) veya {tiers:[[üstSınır,%], ..., [Infinity,%]]}
   // trendyol / n11: sayı (yaklaşık nokta tahmini) veya null (veri yok)
-  // n11 kapsamı KASITLI OLARAK KISMİ (bkz. dosya başı 3. tur notu) — sadece
-  // 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik olduğu sektörler
-  // dolduruldu; override alanı her zaman kullanılabilir.
+  // n11'in DOĞRUDAN KAYNAKLI kapsamı KASITLI OLARAK KISMİ bırakıldı (bkz.
+  // dosya başı 3. tur notu) — sadece 2+ kaynağın örtüştüğü ya da tek kaynağın
+  // çok spesifik olduğu 8 sektör (giyim, ayakkabi, canta, taki, telefon,
+  // mutfak, mobilya, kozmetik) doğrudan kaynaklandı; override alanı her
+  // zaman kullanılabilir.
+  // n11Estimated: true — 11 Ağustos 2026'da eklendi (kullanıcı talebi: n11'de
+  // "sektör yok" diyen boşlukların kapatılması). Kalan 23 sektörden 21'i için
+  // n11 TAHMİNİ dolduruldu: aynı sektörde amazon/trendyol/hepsiburada'dan
+  // mevcut olanların ortalaması alındı (amazon kademeli ise MUHAFAZAKÂR/üst
+  // kademe kullanıldı — TRENDYOL_HIZMET_BEDELI_TRY'deki "muhafazakâr = yüksek
+  // kademe" kuralıyla tutarlı). İki istisna daha güçlü bir sinyal kullandı:
+  // saat → n11'in kendi taki oranını (21) doğrudan ödünç aldı (saat,
+  // marketplace kategori ağaçlarında hemen her zaman takı/aksesuarla aynı
+  // grupta); otomotiv → araştırmadaki n11'e özgü Sentos aralığının (%10,5-14)
+  // orta noktasını kullandı (amazon'un kendi oranına da çok yakın). Küçük
+  // komisyon sapmaları kabul edilebilir — amaç kesin oran değil tahmini bir
+  // fiyat görebilmek — ama bu sektörlerde computeAll/computeAllFromPrice
+  // sonuca estimatedRate:true işler, UI'da "tahmini" ibaresiyle gösterilir ve
+  // override alanı her zaman gerçek veriyle değiştirilebilir. hediyeKarti ve
+  // diger, üç kaynaktan ikisinde de (amazon+hepsiburada) veri olmadığından —
+  // yani kategori marketplace'ler arasında zaten tutarsız/karşılıksız —
+  // tahminsiz null bırakıldı.
   // hepsiburada: 11 Ağustos 2026'da eklendi (bkz. research/hepsiburada-arastirmasi.md).
   // Kaynak, Hepsiburada'nın resmi kategori-komisyon PDF'i (70+ alt kategori) —
   // uygulamanın 31 sektörüne eşlenirken birden fazla alt kategori tek bir sektöre
@@ -257,31 +276,31 @@
     { id: 'ayakkabi', label: 'Ayakkabı', amazon: 17, trendyol: 23, n11: 18.5, hepsiburada: 18 },
     { id: 'canta', label: 'Çanta, Bavul, Seyahat', amazon: 16, trendyol: 21.4, n11: 18, hepsiburada: 18 },
     { id: 'taki', label: 'Takı, Mücevher, Bijuteri', amazon: { tiers: [[900, 20], [Infinity, 6]] }, trendyol: 22.25, n11: 21, hepsiburada: 18 },
-    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null, n11: null, hepsiburada: 18 },
+    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null, n11: 21, n11Estimated: true, hepsiburada: 18 },
     { id: 'telefon', label: 'Cep Telefonu', amazon: 8, trendyol: 6, n11: 6, hepsiburada: 4.5 },
-    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null, n11: null, hepsiburada: 7 },
-    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null, n11: null, hepsiburada: 10 },
-    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5, n11: null, hepsiburada: 6 },
-    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10, n11: null, hepsiburada: 8.5 },
-    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null, n11: null, hepsiburada: 11 },
+    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null, n11: 7, n11Estimated: true, hepsiburada: 7 },
+    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null, n11: 10.5, n11Estimated: true, hepsiburada: 10 },
+    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5, n11: 8.7, n11Estimated: true, hepsiburada: 6 },
+    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10, n11: 8.5, n11Estimated: true, hepsiburada: 8.5 },
+    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null, n11: 11, n11Estimated: true, hepsiburada: 11 },
     { id: 'mutfak', label: 'Mutfak & Dekorasyon', amazon: 15, trendyol: 19.32, n11: 20, hepsiburada: 18 },
     { id: 'mobilya', label: 'Mobilya, Ev Tekstili', amazon: 14.5, trendyol: 21, n11: 19, hepsiburada: 18 },
-    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16, n11: null, hepsiburada: 14 },
-    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75, n11: null, hepsiburada: 16 },
+    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16, n11: 14.7, n11Estimated: true, hepsiburada: 14 },
+    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75, n11: 15.2, n11Estimated: true, hepsiburada: 16 },
     { id: 'kozmetik', label: 'Kozmetik, Parfüm', amazon: { tiers: [[500, 9], [Infinity, 14]] }, trendyol: 18.5, n11: 16, hepsiburada: 15 },
-    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null, n11: null, hepsiburada: 13 },
-    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null, n11: null, hepsiburada: 15 },
-    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5, n11: null, hepsiburada: 15 },
-    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25, n11: null, hepsiburada: 16 },
-    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null, n11: null, hepsiburada: 13 },
-    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5, n11: null, hepsiburada: 16 },
-    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5, n11: null, hepsiburada: 15 },
-    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5, n11: null, hepsiburada: 13 },
-    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null, n11: null, hepsiburada: 5 },
-    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null, n11: null, hepsiburada: 8.5 },
-    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null, n11: null, hepsiburada: 14 },
-    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6, n11: null, hepsiburada: 14 },
-    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26, n11: null, hepsiburada: 23 },
+    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null, n11: 13.3, n11Estimated: true, hepsiburada: 13 },
+    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null, n11: 14.3, n11Estimated: true, hepsiburada: 15 },
+    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5, n11: 13.5, n11Estimated: true, hepsiburada: 15 },
+    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25, n11: 15.4, n11Estimated: true, hepsiburada: 16 },
+    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null, n11: 11.6, n11Estimated: true, hepsiburada: 13 },
+    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5, n11: 14.7, n11Estimated: true, hepsiburada: 16 },
+    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5, n11: 14.8, n11Estimated: true, hepsiburada: 15 },
+    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5, n11: 12.8, n11Estimated: true, hepsiburada: 13 },
+    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null, n11: 6.8, n11Estimated: true, hepsiburada: 5 },
+    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null, n11: 9.3, n11Estimated: true, hepsiburada: 8.5 },
+    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null, n11: 12.3, n11Estimated: true, hepsiburada: 14 },
+    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6, n11: 14.7, n11Estimated: true, hepsiburada: 14 },
+    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26, n11: 24.5, n11Estimated: true, hepsiburada: 23 },
     { id: 'hediyeKarti', label: 'Dijital Hediye Kartı', amazon: null, trendyol: 5, n11: null, hepsiburada: null },
     { id: 'diger', label: 'Diğer', amazon: 10, trendyol: null, n11: null, hepsiburada: null }
   ];
@@ -544,7 +563,8 @@
 
     // --- N11 ---
     (function () {
-      var pct = input.n11OverridePct != null ? input.n11OverridePct : (sector ? sector.n11 : null);
+      var usingOverride = input.n11OverridePct != null;
+      var pct = usingOverride ? input.n11OverridePct : (sector ? sector.n11 : null);
       if (pct == null) {
         results.n11 = { unavailable: true, reason: 'Bu sektör için n11 oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
         return;
@@ -563,6 +583,10 @@
         { label: 'Hedef kâr', pct: input.marginPct }
       ]);
       r.usedPct = pct;
+      // sector.n11Estimated: gerçek n11 verisi olmayan sektörler için diğer
+      // pazaryerlerinden türetilen tahmini oran (bkz. SECTORS başlık notu) —
+      // kullanıcı override girdiyse (gerçek kendi verisi) artık tahmini değil.
+      r.estimatedRate = !usingOverride && !!(sector && sector.n11Estimated);
       results.n11 = r;
     })();
 
@@ -729,7 +753,8 @@
     })();
 
     (function () { // n11
-      var pct = input.n11OverridePct != null ? input.n11OverridePct : (sector ? sector.n11 : null);
+      var usingOverride = input.n11OverridePct != null;
+      var pct = usingOverride ? input.n11OverridePct : (sector ? sector.n11 : null);
       if (pct == null) {
         results.n11 = { unavailable: true, reason: 'Bu sektör için n11 oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
         return;
@@ -743,6 +768,8 @@
         { label: 'Pazarlama + pazaryeri hizmet bedeli', pct: KH.N11_HIZMET_BEDELI_PCT }
       ], priceTRY);
       r.usedPct = pct;
+      // bkz. computeAll()'daki estimatedRate yorumu.
+      r.estimatedRate = !usingOverride && !!(sector && sector.n11Estimated);
       results.n11 = r;
     })();
 

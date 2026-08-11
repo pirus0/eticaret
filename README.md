@@ -460,6 +460,57 @@ yanındaki "Toplu Hesaplama" düğmesiyle açılıyor.
   ondalıklı dosya, izolasyon + "Yeniden hesapla" ve dışa aktarma senaryolarını
   da kapsıyor.
 
+## N11 sektör genişletmesi ve arayüz iyileştirmeleri (11 Ağustos 2026, 5. tur)
+
+Aynı geri bildirim turunda dört ayrı iyileştirme daha yapıldı:
+
+- **N11 sektör genişletmesi (tahmini oranlar):** n11'in kategori komisyonu daha
+  önce yalnızca kaynaklardan doğrudan teyit edilen ~8/31 sektörde doluyken,
+  geri kalanında ("Bahçe Elektrikli El Aletleri" dahil) "n11'de bu sektör yok"
+  uyarısı çıkıyordu. Kullanıcının açık isteğiyle ("küçük komisyon şaşmalarının
+  olduğu durumda sorun yok, tahmini fiyatı görmek istiyorum") kalan 21 sektöre
+  TAHMİNİ bir n11 oranı eklendi: her biri için Amazon, Trendyol ve
+  Hepsiburada'dan (o sektörde hangileri doluysa) oranların ortalaması alındı
+  (Amazon kademeliyse muhafazakâr/yüksek kademesiyle — mevcut yaklaşımla
+  tutarlı). İki istisna: Saat, n11'in kendi Takı sektöründeki gerçek oranı
+  doğrudan ödünç alıyor (ikisi de aynı mücevher/aksesuar grubunda); Otomotiv,
+  Sentos kaynaklı n11'e özgü aralığın ortasını kullanıyor. Hediye Kartı ve
+  Diğer kasıtlı olarak boş bırakıldı — ortalamaya girecek güvenilir bir
+  referans oran yoktu. Bu tahmini oranlar arayüzde sonuç kartında "tahmini"
+  etiketiyle ve Ayarlar panelindeki n11 sütununda noktalı kenarlıklı bir
+  ipucuyla ayrı gösteriliyor; kullanıcı kendi gerçek oranını girerse (override)
+  etiket otomatik kayboluyor. Güven seviyesi kaynaklardan doğrudan gelen ~8
+  sektöre göre daha DÜŞÜK — bkz. aşağıdaki "Kaynak güvenilirliği" bölümündeki
+  n11 notu.
+- **İade maliyeti ipucu → bilgi butonu:** "İade başına ek maliyet" alanının
+  altında her zaman görünen açıklama paragrafı, alanın yanındaki küçük bir "i"
+  butonuna taşındı (tarayıcının yerleşik Popover API'siyle, ek bir kütüphane
+  gerekmeden — dışına tıklayınca veya Escape ile kendiliğinden kapanıyor).
+  Bulunan ve düzeltilen bir detay: popover'ın yalnızca `left`/`top` ile
+  konumlandırılması, sağ kenara yakın butonlarda genişliğin (CSS'in
+  "shrink-to-fit" hesaplamasıyla) beklenenden çok daha dar çıkmasına yol
+  açıyordu — genişlik artık açıkça hesaplanıp atanıyor.
+- **Ek Giderler paneli açılıp kapanabiliyor:** Daha önce her zaman açık olan
+  "Ek Giderler" bölümü artık yerleşik `<details>`/`<summary>` ile
+  açılıp/kapanabiliyor (varsayılan açık). Bulunan ve düzeltilen bir detay:
+  kapatıldığında içerideki alanlar görünür kalmaya devam ediyordu, çünkü
+  `.field { display: flex }` kuralı tarayıcının "kapalı details içeriğini
+  gizle" kuralını (yazar kuralı olduğu için, özgüllükten bağımsız olarak)
+  eziyordu — açık bir `:not([open]) > .field { display: none }` kuralıyla
+  düzeltildi.
+- **Açılma/kapanma animasyonu:** Kullanıcının "çat diye açılıyor ve
+  anlamıyorum" geri bildirimi üzerine, Ek Giderler panelinin açılıp kapanması
+  artık Web Animations API ile yükseklik üzerinden yumuşak biçimde (200ms)
+  animasyonlu. `prefers-reduced-motion: reduce` tercihi olan kullanıcılarda
+  animasyon devre dışı kalıp tarayıcının anlık varsayılan davranışına
+  dönülüyor.
+
+Bu dört değişiklik için `test.js`'e ve `scripts/verify_ui.py`'ye yeni kontroller
+eklendi (tahmini n11 oranı + "tahmini" etiketi, override'ın etiketi temizlemesi,
+panel açma/kapama + gizlenen alanlar, popover konumu/genişliği/Escape ile
+kapanma, reduced-motion senaryosu) — tüm test paketi bu değişikliklerden sonra
+da 113/113 birim testi ve 190/190 arayüz kontrolüyle yeşil.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -577,6 +628,13 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
   bağımsız 2026 tarihli ikincil kaynaktan (Sentos, Paraşüt) derlenen YAKLAŞIK
   değerler — ORTA güven, kapsam kasıtlı olarak kısmi (~8 sektör; kaynaklardan
   biri bazı kategoriler için 2024'ten kalma veri kullandığını itiraf ediyor).
+  **n11 (kalan 21 sektör, tahmini, 11 Ağustos 2026):** Kaynaklarda karşılığı
+  bulunmayan sektörler için gerçek bir n11 oranı DEĞİL — aynı sektördeki
+  Amazon/Trendyol/Hepsiburada oranlarının ortalaması (istisnalar: Saat → n11'in
+  kendi Takı oranı; Otomotiv → Sentos'un n11'e özgü aralığının ortası). DÜŞÜK
+  güven, yalnızca kaba bir fiyat tahmini içindir — kullanıcının kendi gerçek
+  oranını girmesi (override) her zaman önerilir; arayüzde "tahmini" etiketiyle
+  ayrıca işaretleniyor.
   **n11 (hizmet bedeli + kargo):** n11'in kendi resmi destek merkezi sayfasıyla
   doğrulandı — YÜKSEK güven. Kargo firması seçimi ZORUNLU kapalı bir liste
   (Trendyol'la aynı model) — ilk uygulama turunda "serbest" YANLIŞLIKLA

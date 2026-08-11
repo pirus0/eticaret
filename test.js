@@ -215,18 +215,64 @@ console.log('\n--- n11, giyim, maliyet=100, kargo=50, hedefKâr=20% ---');
 console.log('n11:', res.n11.price, 'kullanılan %', res.n11.usedPct);
 check('n11 fiyat (elle, kategori komisyonu + hizmet bedeli)', res.n11.price, n11Fixed / (1 - n11PctTotal), 0.5);
 
-// n11 verisi olmayan bir sektörde (ör. "saat") unavailable dönmeli — override
-// alanı her zaman kullanılabilir olduğu için bu bir hata değil, kasıtlı
-// kısmi kapsam (bkz. calc.js başındaki YENİ PAZARYERLERİ yorumu).
-var n11NoData = KH.computeAll({ costTRY: 100, sectorId: 'saat', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
-console.log('n11 (saat, veri yok):', n11NoData.n11.unavailable ? n11NoData.n11.reason : n11NoData.n11.price);
-if (!n11NoData.n11.unavailable) { console.log('FAIL: n11 icin "unavailable" bekleniyordu (saat sektöründe veri yok)'); failures++; }
+// n11 verisi olmayan bir sektörde (ör. "hediyeKarti") unavailable dönmeli —
+// override alanı her zaman kullanılabilir olduğu için bu bir hata değil.
+// 11 Ağustos 2026'daki N11 sektör genişletmesinden SONRA "saat" gibi eski
+// veri-yok sektörlerinin çoğu artık tahmini bir n11 oranına sahip (aşağıdaki
+// yeni test bloğuna bkz.) — hediyeKarti/diger ise 3 kaynaktan (amazon/
+// trendyol/hepsiburada) ikisinde de hiç veri olmadığı için hâlâ tahminsiz
+// null (bkz. calc.js SECTORS başlık notu).
+var n11NoData = KH.computeAll({ costTRY: 100, sectorId: 'hediyeKarti', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+console.log('n11 (hediyeKarti, veri yok):', n11NoData.n11.unavailable ? n11NoData.n11.reason : n11NoData.n11.price);
+if (!n11NoData.n11.unavailable) { console.log('FAIL: n11 icin "unavailable" bekleniyordu (hediyeKarti sektöründe veri yok)'); failures++; }
 else console.log('OK   n11 veri-yok sektöründe doğru şekilde "unavailable" döndü');
 
 // override her zaman kazanmalı, veri olsun olmasın
-var n11Override = KH.computeAll({ costTRY: 100, sectorId: 'saat', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11OverridePct: 15 });
+var n11Override = KH.computeAll({ costTRY: 100, sectorId: 'hediyeKarti', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11OverridePct: 15 });
 var n11OverridePctTotal = (15 + KH.N11_HIZMET_BEDELI_PCT + 20) / 100;
 check('n11OverridePct veri olmayan sektörde de kullanılıyor', n11Override.n11.price, n11Fixed / (1 - n11OverridePctTotal), 0.5);
+
+// --- 11 Ağustos 2026, 5. tur (N11 sektör genişletmesi, kullanıcı talebi):
+// önceden "sektör yok" diyen 21 sektöre amazon/trendyol/hepsiburada'dan
+// türetilmiş TAHMİNİ bir n11 oranı atandı (bkz. calc.js SECTORS başlık
+// notu) — sonuçta estimatedRate:true işaretlenmeli. Kullanıcının bizzat
+// bildirdiği "Bahçe, Elektrikli El Aletleri" örnek alınıyor. ---
+var bahceResult = KH.computeAll({ costTRY: 100, sectorId: 'bahce', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+console.log('\n--- n11, Bahçe/Elektrikli El Aletleri (önceden veri yoktu, artık tahmini) ---');
+console.log('n11:', bahceResult.n11.unavailable ? bahceResult.n11.reason : bahceResult.n11.price, 'kullanılan %', bahceResult.n11.usedPct, 'estimatedRate:', bahceResult.n11.estimatedRate);
+if (bahceResult.n11.unavailable) { console.log('FAIL: Bahçe sektöründe artık n11 tahmini bir fiyat dönmeli, unavailable dönmemeli'); failures++; }
+else console.log('OK   Bahçe sektöründe n11 artık bir fiyat döndürüyor (unavailable değil)');
+check('Bahçe n11 tahmini oranı SECTORS tablosundakiyle eşleşiyor (%14.7)', bahceResult.n11.usedPct, 14.7, 0.001);
+if (!bahceResult.n11.estimatedRate) { console.log('FAIL: Bahçe n11 sonucu estimatedRate:true olarak işaretlenmeliydi'); failures++; }
+else console.log('OK   Bahçe n11 sonucu estimatedRate:true olarak doğru işaretlendi');
+
+// Kaynaklı (sourced) bir sektörde (giyim) estimatedRate FALSY olmalı.
+if (res.n11.estimatedRate) { console.log('FAIL: giyim (kaynaklı n11 verisi olan sektör) estimatedRate:true OLMAMALI'); failures++; }
+else console.log('OK   Kaynaklı n11 verisi olan sektörde (giyim) estimatedRate falsy');
+
+// Kullanıcı n11OverridePct girerse — sektör tahmini olsa bile — artık KENDİ
+// gerçek verisi kullanıldığı için estimatedRate FALSE'a dönmeli.
+var bahceOverrideResult = KH.computeAll({ costTRY: 100, sectorId: 'bahce', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11OverridePct: 18 });
+if (bahceOverrideResult.n11.estimatedRate) { console.log('FAIL: n11OverridePct girilince estimatedRate FALSE olmalıydı (artık kullanıcının kendi verisi)'); failures++; }
+else console.log('OK   n11OverridePct girilince estimatedRate doğru şekilde false\'a dönüyor');
+check('n11OverridePct, tahmini sektörde de fiyatı override oranıyla hesaplıyor', bahceOverrideResult.n11.usedPct, 18, 0.001);
+
+// computeAllFromPrice (ters mod) de aynı estimatedRate mantığını uygulamalı.
+var bahceRev = KH.computeAllFromPrice({ costTRY: 100, sectorId: 'bahce', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' }, bahceResult.n11.price);
+if (!bahceRev.n11.estimatedRate) { console.log('FAIL: computeAllFromPrice (ters mod) Bahçe için estimatedRate:true işaretlemeliydi'); failures++; }
+else console.log('OK   computeAllFromPrice (ters mod) da estimatedRate:true işaretliyor');
+
+// saat -> taki ödünç alma istisnası: saat artık taki'nin n11 oranıyla (21) AYNI olmalı.
+var saatResult = KH.computeAll({ costTRY: 100, sectorId: 'saat', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+var takiSectorForCompare = KH.SECTORS.filter(function (s) { return s.id === 'taki'; })[0];
+check('saat n11 oranı, taki\'nin n11 oranıyla AYNI (istisna: saat -> taki ödünç)', saatResult.n11.usedPct, takiSectorForCompare.n11, 0.001);
+if (!saatResult.n11.estimatedRate) { console.log('FAIL: saat sektörü de estimatedRate:true olmalıydı'); failures++; }
+else console.log('OK   saat sektörü estimatedRate:true (taki ödünç istisnası da tahmini sayılıyor)');
+
+// hediyeKarti ve diger: 3 kaynaktan ikisinde de (amazon+hepsiburada) veri
+// olmadığı için hâlâ tahminsiz null (yukarıdaki n11NoData testiyle tutarlı).
+check('hediyeKarti n11 hâlâ null (tahminsiz, iki kaynakta da veri yok)', KH.SECTORS.filter(function (s) { return s.id === 'hediyeKarti'; })[0].n11, null);
+check('diger n11 hâlâ null (tahminsiz, iki kaynakta da veri yok)', KH.SECTORS.filter(function (s) { return s.id === 'diger'; })[0].n11, null);
 
 // --- n11KargoOverrideTRY: n11'in kargo firması seçimi ZORUNLU kapalı bir
 // liste (Trendyol'la aynı desen) — dokümantasyon yazılırken n11'in kendi

@@ -98,8 +98,8 @@
       <p class="hint" id="carrierNote"></p>
     </div>
 
-    <div class="field-group" data-reveal>
-      <h2>Ek Giderler</h2>
+    <details class="field-group ek-giderler" data-reveal open>
+      <summary><h2>Ek Giderler</h2></summary>
       <div class="field">
         <label for="ads">Reklam gideri (₺)<span class="field-tag">Opsiyonel</span></label>
         <input type="number" id="ads" inputmode="decimal" min="0" step="0.01" value="0" />
@@ -109,11 +109,13 @@
         <input type="number" id="iadeOrani" inputmode="decimal" min="0" max="100" step="0.5" value="0" />
       </div>
       <div class="field">
-        <label for="iadeMaliyet">İade başına ek maliyet (₺)<span class="field-tag">Opsiyonel</span></label>
+        <label for="iadeMaliyet">İade başına ek maliyet (₺)<span class="field-tag">Opsiyonel</span><button type="button" class="info-btn" popovertarget="iadeMaliyetInfo" aria-label="İade başına ek maliyet hakkında bilgi">i</button></label>
         <input type="number" id="iadeMaliyet" inputmode="decimal" min="0" step="0.01" value="0" />
-        <p class="field-hint">1 Ocak 2026'dan itibaren mesafeli satışlarda iade kargosu satıcıya ait — Amazon/Trendyol/Shopify'ın fiyatına "iade oranı × bu maliyet" olarak eklenir (Etsy hariç, satışları ağırlıkla yurt dışına gittiği için). Kategoriye göre çok değişken olduğundan (giyim/ayakkabıda araştırmalarda %18-%70 arası rakamlar görüldü) güvenilir tek bir varsayılan yok — ikisi de boş/0 kalırsa hesaba hiç girmez, kendi tahmininizi girin.</p>
+        <div id="iadeMaliyetInfo" class="info-popover" popover="auto">
+          <p>1 Ocak 2026'dan itibaren mesafeli satışlarda iade kargosu satıcıya ait — Amazon/Trendyol/Shopify'ın fiyatına "iade oranı × bu maliyet" olarak eklenir (Etsy hariç, satışları ağırlıkla yurt dışına gittiği için). Kategoriye göre çok değişken olduğundan (giyim/ayakkabıda araştırmalarda %18-%70 arası rakamlar görüldü) güvenilir tek bir varsayılan yok — ikisi de boş/0 kalırsa hesaba hiç girmez, kendi tahmininizi girin.</p>
+        </div>
       </div>
-    </div>
+    </details>
 
     <div data-reveal>
       <details class="advanced">

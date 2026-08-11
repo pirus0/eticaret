@@ -241,7 +241,19 @@
 
       ref.card.classList.remove('is-unavailable');
       ref.error.textContent = '';
-      ref.pct.textContent = r.usedPct != null ? ('Kullanılan oran: %' + r.usedPct.toFixed(2).replace(/\.00$/, '')) : '';
+      if (r.usedPct != null) {
+        var pctText = 'Kullanılan oran: %' + r.usedPct.toFixed(2).replace(/\.00$/, '');
+        if (r.estimatedRate) {
+          // sector.n11Estimated'dan gelen bir tahmini oran (bkz. calc.js SECTORS
+          // başlık notu) — kullanıcı override girerse computeAll/computeAllFromPrice
+          // bu bayrağı zaten false yapıyor, o yüzden burada ekstra kontrol gerekmiyor.
+          ref.pct.innerHTML = pctText + ' <span class="field-tag" title="n11 için bu oran doğrudan kaynaklanmadı — diğer pazaryerlerinden tahmin edildi. Gerçek oranı satıcı panelinizden teyit edip Ayarlar bölümünden girebilirsiniz.">tahmini</span>';
+        } else {
+          ref.pct.textContent = pctText;
+        }
+      } else {
+        ref.pct.textContent = '';
+      }
 
       if (reverse) {
         valid.push({ key: key, label: meta.label, sortVal: r.marginPct, marginPct: r.marginPct });
@@ -467,7 +479,8 @@
       'Shopier EKLENDİ (3. tur araştırma, 10 Ağustos 2026): komisyon sabit %2,99 + 0,49₺ (yurt içi) — biri Shopier\'in kendi resmi sayfası olmak üzere 2 bağımsız ve güncel (Kasım 2025 sonrası) kaynakla teyitli, YÜKSEK güven. Daha eski (Eylül 2025) bir üçüncü kaynak aylık satış hacmine göre kademeli bir oran öne sürüyordu; hem daha güncel hem birincil kaynak sabit oranı doğruladığı için kademeli yapı MODELLENMEDİ. Aylık üyelik veya listeleme ücreti yok, sadece satış üzerinden kesinti var. Kargo hizmeti Shopier üzerinden opsiyonel (zorunlu değil), bu yüzden soldaki genel kargo tablosu doğrudan kullanılıyor.',
       'GittiGidiyor ARAŞTIRILDI ama EKLENMEDİ (10 Ağustos 2026): platformun Temmuz 2022\'de tamamen kapanıp eBay bünyesine katıldığı doğrulandı (Hepsiburada\'ya değil) — artık aktif bir pazaryeri olmadığı için hesaba dahil edilmedi.',
       'Kayıtlı ürünler bu tarayıcının kendi cihaz-içi veritabanında (IndexedDB) tutulur — sunucuya gönderilmez, başka bir cihazdan/tarayıcıdan görünmez, tarayıcı verisi temizlenirse silinir.',
-      'Hepsiburada EKLENDİ (4. tur araştırma, 11 Ağustos 2026): komisyon oranları resmi kaynaktan (Hepsiburada\'nın kendi kategori-bazlı komisyon oranları PDF\'i, 70+ alt kategori) — kaynağın kendisi YÜKSEK güven ama 31 sektöre eşlenirken (bazı sektörlerde birden fazla alt kategori tek orana indirgendi) eşleme ORTA güven; özellikle Otomotiv\'de dikkatli olun (14 alt kategori, %9-18 arası geniş bir aralık — override şiddetle önerilir). Komisyonun KDV tabanı sorusu, resmi PDF\'in kendi dipnotu tek başına belirsiz kaldığı için ikincil bir kaynaktaki somut bir örnekle çözüldü: Trendyol/n11 ile aynı desen (oran doğrudan fiyata uygulanıyor, Amazon\'un ×1,20 çarpanı YOK). Komisyondan ayrı bir sabit "hizmet bedeli" birden fazla kaynakta ima edildi ama hiçbirinde somut bir ₺ rakamı yoktu — bu yüzden BİLİNÇLİ OLARAK modellenmedi (uydurma bir sayı eklemek yerine). Kargo: Hepsiburada da kapalı/yarı-kapalı bir anlaşmalı taşıyıcı listesiyle çalışıyor (11 kayıtlı firma, HepsiJET tercih ediliyor ama zorunlu değil) — Trendyol/n11 ile aynı desen, soldaki genel kargo tutarı varsayılan olarak kullanılıyor ama "Hepsiburada → Kargo" alanından değiştirilebilir. Detaylı kaynak listesi ve sektör-eşleme tablosu için bkz. research/hepsiburada-arastirmasi.md.'
+      'Hepsiburada EKLENDİ (4. tur araştırma, 11 Ağustos 2026): komisyon oranları resmi kaynaktan (Hepsiburada\'nın kendi kategori-bazlı komisyon oranları PDF\'i, 70+ alt kategori) — kaynağın kendisi YÜKSEK güven ama 31 sektöre eşlenirken (bazı sektörlerde birden fazla alt kategori tek orana indirgendi) eşleme ORTA güven; özellikle Otomotiv\'de dikkatli olun (14 alt kategori, %9-18 arası geniş bir aralık — override şiddetle önerilir). Komisyonun KDV tabanı sorusu, resmi PDF\'in kendi dipnotu tek başına belirsiz kaldığı için ikincil bir kaynaktaki somut bir örnekle çözüldü: Trendyol/n11 ile aynı desen (oran doğrudan fiyata uygulanıyor, Amazon\'un ×1,20 çarpanı YOK). Komisyondan ayrı bir sabit "hizmet bedeli" birden fazla kaynakta ima edildi ama hiçbirinde somut bir ₺ rakamı yoktu — bu yüzden BİLİNÇLİ OLARAK modellenmedi (uydurma bir sayı eklemek yerine). Kargo: Hepsiburada da kapalı/yarı-kapalı bir anlaşmalı taşıyıcı listesiyle çalışıyor (11 kayıtlı firma, HepsiJET tercih ediliyor ama zorunlu değil) — Trendyol/n11 ile aynı desen, soldaki genel kargo tutarı varsayılan olarak kullanılıyor ama "Hepsiburada → Kargo" alanından değiştirilebilir. Detaylı kaynak listesi ve sektör-eşleme tablosu için bkz. research/hepsiburada-arastirmasi.md.',
+      'N11 SEKTÖR GENİŞLETMESİ — TAHMİNİ ORANLAR (5. tur araştırma, 11 Ağustos 2026): Yukarıdaki n11 notunda kasıtlı olarak boş bırakılan ~23 sektörün 21\'ine, kullanıcının açık isteğiyle ("küçük komisyon şaşmalarının olduğu durumda sorun yok, tahmini fiyatı görmek istiyorum") TAHMİNİ bir oran eklendi — kaynaklardan doğrulanmadılar; aynı sektördeki Amazon/Trendyol/Hepsiburada oranlarının ortalaması kullanıldı (Amazon kademeliyse muhafazakâr/yüksek kademesiyle). İki istisna: Saat, n11\'in kendi Takı oranını (%21) doğrudan kullanıyor; Otomotiv, Sentos\'un n11\'e özgü aralığının ortasını (~%12,3) kullanıyor. Hediye Kartı ve Diğer hâlâ boş bırakıldı — ortalamaya girecek güvenilir bir referans yoktu. Bu 21 sektörün güveni yukarıdaki ~8 sektöre göre DAHA DÜŞÜK (ikinci dereceden bir tahmin, doğrudan kaynak değil); arayüzde sonuç kartında "tahmini" etiketiyle ve Ayarlar panelinde noktalı kenarlıklı bir ipucuyla ayrıca işaretleniyor, kullanıcı kendi oranını girerse (override) etiket otomatik kayboluyor.'
     ];
     el.notesList.innerHTML = notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
   }
@@ -898,6 +911,10 @@
     input.setAttribute('data-key', key);
     if (subKey != null) input.setAttribute('data-subkey', subKey);
     if (opts.ariaLabel) input.setAttribute('aria-label', opts.ariaLabel);
+    if (opts.title) {
+      input.title = opts.title;
+      input.classList.add('has-title-hint');
+    }
     var existing = readSettingsOverride(section, key, subKey);
     if (existing != null) input.value = existing;
     var handler = function () {
@@ -971,8 +988,14 @@
       tr.appendChild(tdTrendyol);
 
       var tdN11 = document.createElement('td');
-      tdN11.appendChild(createSettingsInput('sectors', s.id, 'n11', d.n11,
-        { step: '0.1', max: 90, ariaLabel: s.label + ' n11 komisyonu (%)' }));
+      var n11Opts = { step: '0.1', max: 90, ariaLabel: s.label + ' n11 komisyonu (%)' };
+      if (s.n11Estimated) {
+        // Bu varsayılan doğrudan n11'den kaynaklanmadı, diğer pazaryerlerinden
+        // tahmin edildi (bkz. calc.js SECTORS başlık notu) — kesikli kenarlık +
+        // title ipucuyla ayırt ediliyor.
+        n11Opts.title = 'Bu varsayılan n11\'den doğrudan kaynaklanmadı — Amazon/Trendyol/Hepsiburada oranlarından tahmin edildi. Kesin oranı satıcı panelinizden görüp buraya kalıcı olarak girebilirsiniz.';
+      }
+      tdN11.appendChild(createSettingsInput('sectors', s.id, 'n11', d.n11, n11Opts));
       tr.appendChild(tdN11);
 
       // d.hepsiburada bazı sektörlerde null (hediyeKarti, diger — resmi PDF'te
@@ -1431,6 +1454,124 @@
     if (willOpen) el.bulkPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
+  // Bilgi butonu (i) + popover: native Popover API kullanır (bkz. styles.css
+  // .info-btn/.info-popover yorumu) -- açma/kapama/dış-tıklama/Esc tarayıcı
+  // tarafından otomatik yönetiliyor, burada sadece butonun hemen altına
+  // konumlandırma + ekran taşması düzeltmesi yapılıyor.
+  function initInfoPopovers() {
+    var MARGIN = 8;
+    var MAX_WIDTH = 300;
+    document.querySelectorAll('.info-btn[popovertarget]').forEach(function (btn) {
+      var pop = document.getElementById(btn.getAttribute('popovertarget'));
+      if (!pop) return;
+      btn.addEventListener('click', function () {
+        var r = btn.getBoundingClientRect();
+        // ONEMLI: UA stil sayfasi [popover] icin varsayilan olarak inset:0
+        // uyguluyor -- SADECE left/top ayarlarsak (genislik/yukseklik auto
+        // kalirsa) tarayici shrink-to-fit genisligini "left ile viewport
+        // kenari arasi kalan bosluk" ile SINIRLAR -- max-width'imiz devreye
+        // bile girmeden kutu cok dar cikar (butonu sag tarafa yakinken
+        // dogrulandi: buton left=297px, viewport=390px -> popover sadece
+        // ~93px genislige sikisiyordu). Genisligi ACIKCA vererek bu
+        // belirsizligi tamamen ortadan kaldiriyoruz.
+        var width = Math.min(MAX_WIDTH, window.innerWidth - MARGIN * 2);
+        pop.style.width = width + 'px';
+        pop.style.left = Math.min(r.left, window.innerWidth - width - MARGIN) + 'px';
+        pop.style.top = (r.bottom + MARGIN) + 'px';
+      });
+      pop.addEventListener('toggle', function (e) {
+        if (e.newState !== 'open') return;
+        // Genislik/soldaki konum yukarida zaten viewport'a sigacak sekilde
+        // hesaplandi -- burada sadece YUKSEKLIK (icerik uzunlugu onceden
+        // bilinemedigi icin) tasarsa butonun USTUNE almak gerekiyor.
+        var pr = pop.getBoundingClientRect();
+        if (pr.bottom > window.innerHeight - MARGIN) {
+          var br = btn.getBoundingClientRect();
+          pop.style.top = Math.max(MARGIN, br.top - pr.height - MARGIN) + 'px';
+        }
+      });
+    });
+  }
+
+  // <details>/<summary> acilis-kapanisi varsayilan olarak ANINDA ("cat diye")
+  // oluyor -- kullanici bunu rahatsiz edici/anlasilmaz buldugunu bildirdi.
+  // Web Animations API ile YUKSEKLIGI (height) somut px degerleri arasinda
+  // animasyonluyoruz (WAAPI 'auto' degerini interpolate EDEMEZ, bu yuzden
+  // offsetHeight/scrollHeight ile olculmus somut px'ler kullaniliyor).
+  // Native davranisi bilerek EZIYORUZ (preventDefault + kendi .open atamamiz)
+  // ki hem acilista hem kapanista ayni animasyon calissin.
+  // ONEMLI: styles.css'teki @media (prefers-reduced-motion: reduce) blogu
+  // sadece CSS transition/[data-reveal] icin -- JS-tetiklemeli bu WAAPI
+  // animasyonunu YAKALAMAZ, bu yuzden burada AYRICA kontrol ediliyor.
+  function initDetailsAnimation() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var DURATION = 200;
+    var EASING = 'ease-out';
+
+    document.querySelectorAll('details').forEach(function (details) {
+      var summary = details.querySelector('summary');
+      if (!summary) return;
+      var anim = null;
+      var closing = false;
+      var expanding = false;
+
+      summary.addEventListener('click', function (e) {
+        e.preventDefault();
+        details.style.overflow = 'hidden';
+        if (closing || !details.open) {
+          expand();
+        } else if (expanding || details.open) {
+          collapse();
+        }
+      });
+
+      function expand() {
+        expanding = true;
+        // Kapali yuksekligi ANINDA sabitleyip open=true YAPIYORUZ ki icerik
+        // DOM'a girsin (olculebilsin) ama bir sonraki kareye kadar GORSEL
+        // olarak hala kapali yukseklikte kalsin (aksi halde tam yukseklige
+        // "zip" diye atlayip animasyon anca ONDAN SONRA baslar -- kisa bir
+        // cirkin flash olurdu).
+        details.style.height = details.offsetHeight + 'px';
+        details.open = true;
+        window.requestAnimationFrame(function () {
+          var startHeight = details.offsetHeight;
+          var endHeight = details.scrollHeight;
+          if (anim) anim.cancel();
+          anim = details.animate(
+            { height: [startHeight + 'px', endHeight + 'px'] },
+            { duration: DURATION, easing: EASING }
+          );
+          anim.onfinish = function () { finish(true); };
+          anim.oncancel = function () { expanding = false; };
+        });
+      }
+
+      function collapse() {
+        closing = true;
+        var startHeight = details.offsetHeight;
+        var endHeight = summary.offsetHeight;
+        if (anim) anim.cancel();
+        anim = details.animate(
+          { height: [startHeight + 'px', endHeight + 'px'] },
+          { duration: DURATION, easing: EASING }
+        );
+        anim.onfinish = function () { finish(false); };
+        anim.oncancel = function () { closing = false; };
+      }
+
+      function finish(isOpen) {
+        details.open = isOpen;
+        anim = null;
+        closing = false;
+        expanding = false;
+        details.style.height = '';
+        details.style.overflow = '';
+      }
+    });
+  }
+
   function initBulkPanel() {
     el.bulkToggleBtn.addEventListener('click', toggleBulkPanel);
     el.bulkTemplateBtn.addEventListener('click', downloadBulkTemplate);
@@ -1447,6 +1588,8 @@
     // ilk hesaplamadan önce uyguluyor (bkz. settings.js başlık notu).
     initSettingsPanel();
     initBulkPanel();
+    initInfoPopovers();
+    initDetailsAnimation();
     buildResultCards();
     populateSelects();
     renderNotes();
