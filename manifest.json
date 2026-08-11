@@ -1,7 +1,7 @@
 {
   "name": "Kâr Marjı Hesaplayıcı",
   "short_name": "Kâr Hesap",
-  "description": "Amazon, Trendyol, Shopify ve Etsy için komisyon, kargo ve reklam giderini hesaba katarak hedef kâr marjına göre satış fiyatı hesaplar.",
+  "description": "Amazon, Trendyol, n11, Hepsiburada, Shopify, Shopier ve Etsy için komisyon, kargo ve reklam giderini hesaba katarak hedef kâr marjına göre satış fiyatı hesaplar.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

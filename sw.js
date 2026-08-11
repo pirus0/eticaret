@@ -8,7 +8,15 @@
 // panelinden yapilan degisiklikler hesaplamaya gercekten yansiyor) - eski
 // onbellek settings.js'i hic sunmazdi ve calc.js'in eski (duzeltilmemis)
 // surumunde ayarlar sessizce yok sayilirdi.
-var CACHE_NAME = 'kar-hesap-v7';
+// v8 (11 Agustos 2026): uc yeni ozellik ayni turda eklendi — kayitli urunler
+// panosu (portfoy ozeti/siralama/filtre, storage.js/app.js), 5. pazaryeri
+// olarak Hepsiburada (calc.js/settings.js/app.js/styles.css/index.html) ve
+// CSV tabanli toplu hesaplama (app.js/index.html/styles.css). Yeni ayri bir
+// dosya eklenmedi (APP_SHELL degismiyor) ama mevcut onbellekteki eski
+// app.js/index.html/styles.css/calc.js/settings.js bu ozelliklerin hicbirini
+// icermiyordu — surum artmazsa cevrimdisi/eski-onbellekli kullanicilar eski
+// (Hepsiburada'siz, panosuz, toplu hesaplamasiz) surumde kalirdi.
+var CACHE_NAME = 'kar-hesap-v8';
 
 var APP_SHELL = [
   './',

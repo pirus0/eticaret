@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>Kâr Marjı Hesaplayıcı</title>
-<meta name="description" content="Amazon, Trendyol, n11, Shopify, Shopier ve Etsy için komisyon, kargo ve reklam giderini hesaba katarak hedef kâr marjına göre satış fiyatı hesaplar." />
+<meta name="description" content="Amazon, Trendyol, n11, Hepsiburada, Shopify, Shopier ve Etsy için komisyon, kargo ve reklam giderini hesaba katarak hedef kâr marjına göre satış fiyatı hesaplar." />
 <meta name="theme-color" content="#17160F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
@@ -162,6 +162,20 @@
           </div>
         </div>
 
+        <div class="platform-group hepsiburada">
+          <h4>Hepsiburada</h4>
+          <div class="field">
+            <label for="hepsiburadaOverride">Komisyon (%)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="hepsiburadaOverride" inputmode="decimal" min="0" max="90" step="0.1" placeholder="otomatik" />
+            <p class="field-hint">Varsayılan, Hepsiburada'nın resmi kategori-bazlı komisyon oranları listesinden (70+ alt kategori) uygulamanın sektörlerine eşlenerek alındı — bazı sektörlerde birden fazla alt kategori tek bir orana indirgendi (özellikle Otomotiv'de dikkatli olun, %9-18 arası geniş bir aralık var). Bazı sektörlerde (Hediye Kartı, Diğer) uygun bir eşleşme yok — panelinizdeki gerçek oranı buraya yazabilirsiniz.</p>
+          </div>
+          <div class="field">
+            <label for="hepsiburadaKargoOverride">Kargo (₺)<span class="field-tag">Opsiyonel</span></label>
+            <input type="number" id="hepsiburadaKargoOverride" inputmode="decimal" min="0" step="0.01" placeholder="otomatik (soldaki kargo tutarı)" />
+            <p class="field-hint">Hepsiburada da kapalı/yarı-kapalı bir anlaşmalı kargo listesiyle çalışıyor (11 kayıtlı firma, HepsiJET tercih ediliyor ama zorunlu değil) — soldaki genel tutar farklı bir kaynaktan geldiği için panelinizin kestiği gerçek tutarla birebir örtüşmeyebilir. Panelinizdeki gerçek tutarı biliyorsanız buraya yazın.</p>
+          </div>
+        </div>
+
         <div class="platform-group shopify">
           <h4>Shopify</h4>
           <p class="field-hint">Shopify Payments Türkiye'de kullanılamıyor — bu yüzden mağazanız yerel bir sağlayıcı (iyzico/PayTR/banka sanal POS vb.) kullanmak zorunda. Aşağıdaki oran, ödeme sağlayıcınızın kestiği komisyon + Shopify'ın plana göre eklediği "dış sağlayıcı" ek ücretinin TOPLAMI.</p>
@@ -260,7 +274,7 @@
         <div class="settings-table-wrap">
           <table class="settings-table">
             <thead>
-              <tr><th>Sektör</th><th>Amazon (%)</th><th>Trendyol (%)</th><th>n11 (%)</th></tr>
+              <tr><th>Sektör</th><th>Amazon (%)</th><th>Trendyol (%)</th><th>n11 (%)</th><th>Hepsiburada (%)</th></tr>
             </thead>
             <tbody id="settingsSectorsBody"></tbody>
           </table>
@@ -312,6 +326,50 @@
   </section>
 </section>
 
+<!-- Toplu hesaplama (11 Ağustos 2026) — Ayarlar paneliyle AYNI açılıp-kapanan
+     panel deseni (hamburger menü/sekme YOK). .settings-section'ın hemen
+     ardında, aynı nedenle .layout DIŞINDA/.page İÇİNDE konumlandı (bkz.
+     yukarıdaki "Ayarlar paneli" yorumu — burada da geçerli). -->
+<section class="bulk-section" data-reveal>
+  <button type="button" class="btn-secondary bulk-toggle" id="bulkToggleBtn" aria-expanded="false" aria-controls="bulkPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.25" y="4.25" width="17.5" height="15.5" rx="1.5"/><path d="M3.25 9.5h17.5M9.5 9.5v10.25"/></svg>
+    <span>Toplu Hesaplama</span>
+  </button>
+
+  <section class="card bulk-panel" id="bulkPanel" hidden aria-label="Toplu Hesaplama">
+    <div class="bulk-panel-head">
+      <h2>Toplu Hesaplama</h2>
+      <p class="field-hint">Çok sayıda ürünü tek seferde hesaplamak için: şablon CSV'yi indirin, Excel/Google E-Tablolar'da ürün adı/maliyet/sektör/hedef kâr sütunlarını doldurun, sonra buradan geri yükleyin. Kargo/reklam/aylık adet sütunları boş bırakılırsa soldaki ana formda o an girili olan değerler kullanılır — platforma özel oranlar/ayarlar da (Ayarlar paneli + "Platforma özel ayarlar") TÜM satırlara aynı şekilde uygulanır, sadece maliyet/sektör/hedef kâr ürün başına değişir.</p>
+    </div>
+
+    <div class="bulk-actions">
+      <button type="button" class="btn-secondary" id="bulkTemplateBtn">Şablon CSV indir</button>
+      <div class="field bulk-file-field">
+        <label for="bulkFileInput">CSV yükle</label>
+        <input type="file" id="bulkFileInput" accept=".csv,text/csv" />
+      </div>
+    </div>
+
+    <div class="bulk-status" id="bulkStatus" hidden></div>
+
+    <div class="bulk-results-wrap" id="bulkResultsWrap" hidden>
+      <div class="bulk-results-head">
+        <p class="field-hint" id="bulkResultsSummary"></p>
+        <div class="bulk-results-actions">
+          <button type="button" class="btn-secondary" id="bulkRecalcBtn">Yeniden hesapla</button>
+          <button type="button" class="btn-secondary" id="bulkExportBtn">Sonuçları CSV olarak indir</button>
+        </div>
+      </div>
+      <div class="settings-table-wrap">
+        <table class="settings-table bulk-table">
+          <thead><tr id="bulkResultsHead"></tr></thead>
+          <tbody id="bulkResultsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</section>
+
 </main>
 
 <!-- Kaydet diyaloğu: özet şeridindeki kaydet ikonuyla açılır. -->
@@ -334,6 +392,7 @@
           <option value="amazon">Amazon.com.tr</option>
           <option value="trendyol">Trendyol</option>
           <option value="n11">n11</option>
+          <option value="hepsiburada">Hepsiburada</option>
           <option value="shopify">Shopify</option>
           <option value="shopier">Shopier</option>
           <option value="etsy">Etsy</option>
@@ -367,6 +426,33 @@
     </button>
   </div>
   <div class="dialog-body">
+    <!-- Portföy özeti + sıralama/filtre: kayıtlı ürün yokken veya panel ilk
+         açıldığında JS (renderSavedSummary/applySavedFiltersAndRender) dolduruyor;
+         boşken gizli kalır (bkz. app.js). -->
+    <div class="saved-toolbar" id="savedToolbar" hidden>
+      <div class="saved-summary">
+        <p class="saved-summary-line"><strong id="savedSummaryCount">0</strong> ürün kayıtlı · öncelikli platformda toplam birim kâr <strong id="savedSummaryBirimKar">—</strong></p>
+        <p class="saved-summary-line" id="savedSummaryMonthlyWrap" hidden>Toplam aylık kâr projeksiyonu <strong id="savedSummaryMonthly">—</strong></p>
+        <ul class="saved-platform-rank" id="savedPlatformRank"></ul>
+      </div>
+      <div class="saved-controls">
+        <div class="field">
+          <label for="savedSortSelect">Sırala</label>
+          <select id="savedSortSelect">
+            <option value="date-desc">Eklenme (yeni → eski)</option>
+            <option value="profit-desc">Birim kâr (yüksek → düşük)</option>
+            <option value="profit-asc">Birim kâr (düşük → yüksek)</option>
+            <option value="name-asc">İsim (A → Z)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="savedSectorFilter">Sektör</label>
+          <select id="savedSectorFilter">
+            <option value="">Tüm sektörler</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div class="saved-empty" id="savedEmpty">Henüz kayıtlı ürün yok. Beğendiğin bir hesaplamada özet şeridindeki kaydet ikonuna basarak buraya ekleyebilirsin.</div>
     <div class="saved-list" id="savedList"></div>
   </div>

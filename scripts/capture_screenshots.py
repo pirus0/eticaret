@@ -73,6 +73,78 @@ with sync_playwright() as p:
     wide2.screenshot(path="shot_settings_wide_dark.png", full_page=True)
     wide2.close()
 
+    # 10) Mobil, kayitli urunler panosu (ozet + siralama/filtre + kartlar) --
+    # 3 sentetik kayit KHStore'a dogrudan eklenip panel aciliyor. NOT: <dialog>
+    # bir "top layer" elemani oldugu icin full_page=True bu panelde guvenilir
+    # calismiyor (Playwright/Chromium, dialog icerigini viewport'a gore degil
+    # document'e gore kirpiyor) -- bu yuzden BILEREK normal (viewport) screenshot
+    # kullaniliyor, tipki asagidaki gibi.
+    dash = browser.new_page(viewport={"width": 420, "height": 900})
+    dash.goto(f"{BASE}/index.html", wait_until="networkidle")
+    dash.evaluate("""
+        () => {
+          var specs = [
+            { name: 'Kışlık Kaban', sectorId: 'giyim', costTRY: 100, marginPct: 20, prioritySite: 'shopify' },
+            { name: 'Akıllı Telefon Kılıfı', sectorId: 'telefon', costTRY: 200, marginPct: 15, prioritySite: 'trendyol' },
+            { name: 'Deri Bot', sectorId: 'ayakkabi', costTRY: 50, marginPct: 30, prioritySite: 'amazon' }
+          ];
+          var chain = Promise.resolve();
+          specs.forEach(function (spec) {
+            var input = { costTRY: spec.costTRY, sectorId: spec.sectorId, marginPct: spec.marginPct,
+              kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', etsyPaymentPct: 4,
+              etsyOffsiteAds: false, etsyOverThreshold: false, monthlyUnits: 10 };
+            var results = KH.computeAll(input);
+            var rec = { name: spec.name, prioritySite: spec.prioritySite, image: null,
+              createdAt: Date.now(), input: input, results: results };
+            chain = chain.then(function () { return KHStore.addItem(rec); });
+          });
+          return chain;
+        }
+    """)
+    dash.click("#savedListBtn")
+    dash.wait_for_timeout(500)
+    dash.screenshot(path="shot_saved_dashboard_light.png")
+    dash.close()
+
+    # 11) Genis ekran, acik tema, toplu hesaplama -- gecerli bir CSV yuklenmis,
+    # sonuc tablosu (7 platform sutunu + "en ucuz" kalin vurgusu) goruntude.
+    import csv as _csv
+    import tempfile, os
+    valid_csv = os.path.join(tempfile.gettempdir(), "shot_bulk_valid.csv")
+    with open(valid_csv, "w", encoding="utf-8-sig", newline="") as f:
+        w = _csv.writer(f)
+        w.writerow(["Ürün Adı", "Maliyet (₺)", "Sektör", "Hedef Kâr (%)", "Kargo (₺)", "Reklam (₺)", "Aylık Adet"])
+        w.writerow(["Kışlık Mont", "450", "Giyim", "25", "", "", "20"])
+        w.writerow(["Bluetooth Kulaklık", "180", "Elektronik Aksesuar", "30", "45", "10", "50"])
+        w.writerow(["Deri Cüzdan", "90", "Çanta, Bavul, Seyahat", "35", "", "", ""])
+
+    bulk = browser.new_page(viewport={"width": 1400, "height": 1000})
+    bulk.goto(f"{BASE}/index.html", wait_until="networkidle")
+    bulk.click("#bulkToggleBtn")
+    bulk.wait_for_timeout(300)
+    bulk.set_input_files("#bulkFileInput", valid_csv)
+    bulk.wait_for_timeout(400)
+    bulk.eval_on_selector("#bulkPanel", "el => el.scrollIntoView({block:'start'})")
+    bulk.screenshot(path="shot_bulk_wide_light.png", full_page=True)
+
+    # 12) Ayni panel, karanlik tema + kismi hata iceren CSV -- ".bulk-row-error"
+    # vurgusu ve gecerli satirin BIRLIKTE dogru gorundugunu kontrol eder.
+    mixed_csv = os.path.join(tempfile.gettempdir(), "shot_bulk_mixed.csv")
+    with open(mixed_csv, "w", encoding="utf-8-sig", newline="") as f:
+        w = _csv.writer(f)
+        w.writerow(["Ürün Adı", "Maliyet (₺)", "Sektör", "Hedef Kâr (%)"])
+        w.writerow(["İyi Ürün", "200", "Giyim", "25"])
+        w.writerow(["Kötü Maliyet", "abc", "Giyim", "25"])
+        w.writerow(["Kötü Sektör", "150", "Var Olmayan Sektör XYZ", "25"])
+
+    bulk.click("#themeToggleBtn")
+    bulk.wait_for_timeout(300)
+    bulk.set_input_files("#bulkFileInput", mixed_csv)
+    bulk.wait_for_timeout(400)
+    bulk.eval_on_selector("#bulkPanel", "el => el.scrollIntoView({block:'start'})")
+    bulk.screenshot(path="shot_bulk_wide_dark_errors.png", full_page=True)
+    bulk.close()
+
     browser.close()
 
 print("Ekran goruntuleri kaydedildi.")

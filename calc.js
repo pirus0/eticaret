@@ -101,6 +101,30 @@
  *   - GittiGidiyor ARAŞTIRILDI ama EKLENMEDİ: platform 2022'de kapandı, eBay
  *     bünyesine katıldı (Temmuz 2022 itibarıyla tamamen kapalı) — aktif bir
  *     pazaryeri değil, bkz. research.
+ *
+ * HEPSİBURADA — 4. TUR (11 Ağustos 2026, kullanıcının "programı nasıl daha
+ * kullanışlı hale getirebiliriz" sorusuna verdiği önceliklerden biri; bkz.
+ * research/hepsiburada-arastirmasi.md):
+ *   - Trendyol ve Amazon.com.tr'den sonra üçüncü büyük genel pazaryeri eklendi.
+ *     Komisyon oranları Hepsiburada'nın kendi CDN'sinde barındırılan resmi bir
+ *     PDF'ten (70+ alt kategori) alınıp uygulamanın 31 sektörüne eşlendi —
+ *     kaynağın kendisi YÜKSEK güvenli (resmi), ama eşleme daha kaba olduğu
+ *     için (PDF çok daha granüler) genel güven ORTA sayılmalı; araştırma
+ *     dosyasında her sektör için hangi PDF satırının kullanıldığı ayrı ayrı
+ *     not edildi. 2 sektörde (hediyeKarti, diger) uygun bir PDF eşleşmesi
+ *     yoktu, Trendyol/n11'deki `null` (veri yok) deseniyle bırakıldı.
+ *   - KDV/komisyon mekanizması: resmi PDF'in dipnotu tek başına belirsizdi
+ *     ("listeleme fiyatı üzerinden +KDV olarak hesaplanacaktır") ama bir
+ *     ikincil kaynağın somut formül+örneği ("200₺ × %18 = 36₺, başka adım
+ *     yok") netleştirdi — oran DOĞRUDAN satış fiyatına uygulanıyor, Amazon'daki
+ *     gibi ayrı bir `* 1.20` çarpanı YOK (Trendyol/n11 ile aynı `pct` deseni).
+ *   - Sabit bir "hizmet bedeli" kavramsal olarak var (birden fazla kaynak
+ *     bahsediyor) ama hiçbir kaynakta somut bir ₺ rakamı yok — Trendyol/n11'in
+ *     aksine bu yüzden BİLEREK bir sabit ücret alanı eklenmedi.
+ *   - Kargo: kapalı/yarı-kapalı anlaşmalı liste (11 taşıyıcı, HepsiJET
+ *     öncelikli ama zorunlu değil) — Trendyol/n11 ile aynı desen, paylaşılan
+ *     `kargoTRY` yön gösterici varsayılan, `hepsiburadaKargoOverrideTRY`
+ *     girilirse ona öncelik veriliyor.
  */
 
 (function (root) {
@@ -223,38 +247,43 @@
   // n11 kapsamı KASITLI OLARAK KISMİ (bkz. dosya başı 3. tur notu) — sadece
   // 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik olduğu sektörler
   // dolduruldu; override alanı her zaman kullanılabilir.
+  // hepsiburada: 11 Ağustos 2026'da eklendi (bkz. research/hepsiburada-arastirmasi.md).
+  // Kaynak, Hepsiburada'nın resmi kategori-komisyon PDF'i (70+ alt kategori) —
+  // uygulamanın 31 sektörüne eşlenirken birden fazla alt kategori tek bir sektöre
+  // karşılık geldiğinde en temsili değer seçildi (araştırma dosyasında satır satır
+  // gerekçelendirildi). null = PDF'te uygun bir eşleşme yok (hediyeKarti, diger).
   var SECTORS = [
-    { id: 'giyim', label: 'Giyim', amazon: 15.5, trendyol: 21.4, n11: 20.34 },
-    { id: 'ayakkabi', label: 'Ayakkabı', amazon: 17, trendyol: 23, n11: 18.5 },
-    { id: 'canta', label: 'Çanta, Bavul, Seyahat', amazon: 16, trendyol: 21.4, n11: 18 },
-    { id: 'taki', label: 'Takı, Mücevher, Bijuteri', amazon: { tiers: [[900, 20], [Infinity, 6]] }, trendyol: 22.25, n11: 21 },
-    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null, n11: null },
-    { id: 'telefon', label: 'Cep Telefonu', amazon: 8, trendyol: 6, n11: 6 },
-    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null, n11: null },
-    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null, n11: null },
-    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5, n11: null },
-    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10, n11: null },
-    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null, n11: null },
-    { id: 'mutfak', label: 'Mutfak & Dekorasyon', amazon: 15, trendyol: 19.32, n11: 20 },
-    { id: 'mobilya', label: 'Mobilya, Ev Tekstili', amazon: 14.5, trendyol: 21, n11: 19 },
-    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16, n11: null },
-    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75, n11: null },
-    { id: 'kozmetik', label: 'Kozmetik, Parfüm', amazon: { tiers: [[500, 9], [Infinity, 14]] }, trendyol: 18.5, n11: 16 },
-    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null, n11: null },
-    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null, n11: null },
-    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5, n11: null },
-    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25, n11: null },
-    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null, n11: null },
-    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5, n11: null },
-    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5, n11: null },
-    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5, n11: null },
-    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null, n11: null },
-    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null, n11: null },
-    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null, n11: null },
-    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6, n11: null },
-    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26, n11: null },
-    { id: 'hediyeKarti', label: 'Dijital Hediye Kartı', amazon: null, trendyol: 5, n11: null },
-    { id: 'diger', label: 'Diğer', amazon: 10, trendyol: null, n11: null }
+    { id: 'giyim', label: 'Giyim', amazon: 15.5, trendyol: 21.4, n11: 20.34, hepsiburada: 18 },
+    { id: 'ayakkabi', label: 'Ayakkabı', amazon: 17, trendyol: 23, n11: 18.5, hepsiburada: 18 },
+    { id: 'canta', label: 'Çanta, Bavul, Seyahat', amazon: 16, trendyol: 21.4, n11: 18, hepsiburada: 18 },
+    { id: 'taki', label: 'Takı, Mücevher, Bijuteri', amazon: { tiers: [[900, 20], [Infinity, 6]] }, trendyol: 22.25, n11: 21, hepsiburada: 18 },
+    { id: 'saat', label: 'Kol Saati', amazon: 15.5, trendyol: null, n11: null, hepsiburada: 18 },
+    { id: 'telefon', label: 'Cep Telefonu', amazon: 8, trendyol: 6, n11: 6, hepsiburada: 4.5 },
+    { id: 'bilgisayar', label: 'Bilgisayar', amazon: 7, trendyol: null, n11: null, hepsiburada: 7 },
+    { id: 'elektronikAksesuar', label: 'Elektronik Aksesuar', amazon: 11, trendyol: null, n11: null, hepsiburada: 10 },
+    { id: 'tv', label: 'TV, Ev Eğlence Sistemleri', amazon: 11.5, trendyol: 8.5, n11: null, hepsiburada: 6 },
+    { id: 'beyazEsya', label: 'Beyaz Eşya', amazon: 7, trendyol: 10, n11: null, hepsiburada: 8.5 },
+    { id: 'kucukEvAleti', label: 'Küçük Ev Aletleri', amazon: 11, trendyol: null, n11: null, hepsiburada: 11 },
+    { id: 'mutfak', label: 'Mutfak & Dekorasyon', amazon: 15, trendyol: 19.32, n11: 20, hepsiburada: 18 },
+    { id: 'mobilya', label: 'Mobilya, Ev Tekstili', amazon: 14.5, trendyol: 21, n11: 19, hepsiburada: 18 },
+    { id: 'bahce', label: 'Bahçe, Elektrikli El Aletleri', amazon: 14, trendyol: 16, n11: null, hepsiburada: 14 },
+    { id: 'yapiMarket', label: 'Yapı Market, Banyo', amazon: 12.7, trendyol: 16.75, n11: null, hepsiburada: 16 },
+    { id: 'kozmetik', label: 'Kozmetik, Parfüm', amazon: { tiers: [[500, 9], [Infinity, 14]] }, trendyol: 18.5, n11: 16, hepsiburada: 15 },
+    { id: 'kisiselBakimCihaz', label: 'Kişisel Bakım Cihazları', amazon: 13.6, trendyol: null, n11: null, hepsiburada: 13 },
+    { id: 'saglik', label: 'Sağlık & Kişisel Bakım', amazon: 13.5, trendyol: null, n11: null, hepsiburada: 15 },
+    { id: 'gida', label: 'Gıda, Süpermarket', amazon: { tiers: [[500, 9], [Infinity, 13]] }, trendyol: 12.5, n11: null, hepsiburada: 15 },
+    { id: 'oyuncak', label: 'Oyuncak & Oyun', amazon: 13, trendyol: 17.25, n11: null, hepsiburada: 16 },
+    { id: 'kitap', label: 'Kitap', amazon: 10.2, trendyol: null, n11: null, hepsiburada: 13 },
+    { id: 'anneBebek', label: 'Anne & Bebek', amazon: 11.5, trendyol: 16.5, n11: null, hepsiburada: 16 },
+    { id: 'ofis', label: 'Ofis, Kırtasiye', amazon: 13, trendyol: 16.5, n11: null, hepsiburada: 15 },
+    { id: 'spor', label: 'Spor, Outdoor', amazon: 10, trendyol: 15.5, n11: null, hepsiburada: 13 },
+    { id: 'oyunKonsol', label: 'Video Oyun Konsolu', amazon: 8.5, trendyol: null, n11: null, hepsiburada: 5 },
+    { id: 'videoOyun', label: 'Video Oyunları', amazon: 10, trendyol: null, n11: null, hepsiburada: 8.5 },
+    { id: 'otomotiv', label: 'Otomotiv & Motosiklet', amazon: 12.5, trendyol: null, n11: null, hepsiburada: 14 },
+    { id: 'petshop', label: 'Evcil Hayvan (Petshop)', amazon: 13.5, trendyol: 16.6, n11: null, hepsiburada: 14 },
+    { id: 'telefonYedek', label: 'Telefon Yedek Parça', amazon: null, trendyol: 26, n11: null, hepsiburada: 23 },
+    { id: 'hediyeKarti', label: 'Dijital Hediye Kartı', amazon: null, trendyol: 5, n11: null, hepsiburada: null },
+    { id: 'diger', label: 'Diğer', amazon: 10, trendyol: null, n11: null, hepsiburada: null }
   ];
 
   function resolveRate(rate, priceTRY) {
@@ -382,7 +411,8 @@
     'amazonOverridePct', 'trendyolOverridePct', 'trendyolKargoOverrideTRY',
     'trendyolHizmetBedeliTRY', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY',
     'shopifyMonthlyUnits', 'etsyKargoTRY', 'etsyPaymentPct',
-    'n11OverridePct', 'shopierOverridePct', 'monthlyUnits', 'n11KargoOverrideTRY'
+    'n11OverridePct', 'shopierOverridePct', 'monthlyUnits', 'n11KargoOverrideTRY',
+    'hepsiburadaOverridePct', 'hepsiburadaKargoOverrideTRY'
   ];
   function sanitizeInput(raw) {
     var out = {};
@@ -398,15 +428,17 @@
     //   etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct,
     //   amazonOverridePct, trendyolKargoOverrideTRY, n11KargoOverrideTRY, etsyKargoTRY,
     //   trendyolHizmetBedeliTRY, shopifyGatewayPct, shopifyGatewayFixedTRY,
+    //   hepsiburadaOverridePct, hepsiburadaKargoOverrideTRY,
     //   iadeOraniPct, iadeMaliyetTRY }
-    // kargoTRY: Amazon (satıcı-gönderimli) + Shopify + n11 + Trendyol'un varsayılanı.
-    // trendyolKargoOverrideTRY / n11KargoOverrideTRY: verilirse ilgili platform
-    // için kargoTRY yerine kullanılır — ikisi de KAPALI anlaşmalı kargo listesi
-    // kullandığından (bkz. dosya başı 3. tur notu) paylaşılan genel tutar sadece
-    // yön gösterici, gerçek panel tutarı bu alanlara girilebilir.
+    // kargoTRY: Amazon (satıcı-gönderimli) + Shopify + n11 + Trendyol + Hepsiburada'nın varsayılanı.
+    // trendyolKargoOverrideTRY / n11KargoOverrideTRY / hepsiburadaKargoOverrideTRY:
+    // verilirse ilgili platform için kargoTRY yerine kullanılır — üçü de KAPALI
+    // (veya yarı-kapalı) anlaşmalı kargo listesi kullandığından (bkz. dosya başı
+    // 3. tur notu ve research/hepsiburada-arastirmasi.md) paylaşılan genel tutar
+    // sadece yön gösterici, gerçek panel tutarı bu alanlara girilebilir.
     // etsyKargoTRY: Etsy'ye özel, kargoTRY'den bağımsız (bkz. dosya başındaki not).
-    // iadeOraniPct/iadeMaliyetTRY: Amazon/Trendyol/Shopify'a uygulanan beklenen
-    // iade maliyeti (oran% × maliyet); Etsy'ye UYGULANMAZ (bkz. dosya başı notu).
+    // iadeOraniPct/iadeMaliyetTRY: Amazon/Trendyol/Shopify/Hepsiburada'ya uygulanan
+    // beklenen iade maliyeti (oran% × maliyet); Etsy'ye UYGULANMAZ (bkz. dosya başı notu).
     var input = sanitizeInput(rawInput);
     var sector = SECTORS.filter(function (s) { return s.id === input.sectorId; })[0];
     var results = {};
@@ -532,6 +564,29 @@
       ]);
       r.usedPct = pct;
       results.n11 = r;
+    })();
+
+    // --- HEPSİBURADA ---
+    (function () {
+      var pct = input.hepsiburadaOverridePct != null ? input.hepsiburadaOverridePct : (sector ? sector.hepsiburada : null);
+      if (pct == null) {
+        results.hepsiburada = { unavailable: true, reason: 'Bu sektör için Hepsiburada oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
+        return;
+      }
+      // Hepsiburada'nın resmi komisyon PDF'i orana ayrıca bir KDV çarpanı
+      // GEREKTİRMİYOR (Amazon'daki pct*1.20'nin aksine) — ikincil bir kaynağın
+      // somut formül+örneği bunu doğruluyor, oran doğrudan satış fiyatına
+      // uygulanıyor (Trendyol/n11 ile aynı desen). Bkz. research/hepsiburada-arastirmasi.md.
+      // Kargo: kapalı/yarı-kapalı anlaşmalı liste (11 taşıyıcı) — Trendyol/n11
+      // ile aynı override deseni.
+      var hepsiburadaKargo = input.hepsiburadaKargoOverrideTRY != null ? input.hepsiburadaKargoOverrideTRY : input.kargoTRY;
+      var fixed = input.costTRY + hepsiburadaKargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
+      var r = solvePrice(fixed, [
+        { label: 'Komisyon (yaklaşık)', pct: pct },
+        { label: 'Hedef kâr', pct: input.marginPct }
+      ]);
+      r.usedPct = pct;
+      results.hepsiburada = r;
     })();
 
     // --- SHOPIFY ---
@@ -689,6 +744,19 @@
       ], priceTRY);
       r.usedPct = pct;
       results.n11 = r;
+    })();
+
+    (function () { // Hepsiburada
+      var pct = input.hepsiburadaOverridePct != null ? input.hepsiburadaOverridePct : (sector ? sector.hepsiburada : null);
+      if (pct == null) {
+        results.hepsiburada = { unavailable: true, reason: 'Bu sektör için Hepsiburada oranı yok — satıcı panelinizden kontrol edip ilgili alana yazabilirsiniz.' };
+        return;
+      }
+      var hepsiburadaKargo = input.hepsiburadaKargoOverrideTRY != null ? input.hepsiburadaKargoOverrideTRY : input.kargoTRY;
+      var fixed = input.costTRY + hepsiburadaKargo + input.reklamTRY + iadeBeklenenMaliyetTRY;
+      var r = marginFromPrice(fixed, [{ label: 'Komisyon (yaklaşık)', pct: pct }], priceTRY);
+      r.usedPct = pct;
+      results.hepsiburada = r;
     })();
 
     (function () { // Shopify

@@ -34,15 +34,29 @@
      doğrulanmış set (OKLab ΔE + protan/deutan simülasyonu ile kontrol edildi,
      bkz. scripts/ — node ile dataviz validator'ı çalıştırıldı). Gerçek marka
      renkleri kasıtlı kullanılmadı: Amazon/Trendyol/Etsy üçü de turuncu
-     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 6 ton (10 Ağustos
-     2026'da n11/Shopier eklenmesiyle 4'ten 6'ya çıktı), sitedeki TEK renk
+     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 7 ton (11 Ağustos
+     2026'da Hepsiburada eklenmesiyle 6'dan 7'ye çıktı — önceki adım 10
+     Ağustos 2026'da n11/Shopier ile 4'ten 6'ya çıkmıştı), sitedeki TEK renk
      kaynağı — geri kalan her şey mürekkep/kağıt. Karanlık mod için AYNI
      hueler farklı L/C adımlarıyla yeniden doğrulandı (bkz. body.dark-theme) —
      otomatik ters çevirme değil, "aynı rampanın karanlık zemine göre
-     doğrulanmış kendi adımı" (dataviz kuralı). */
+     doğrulanmış kendi adımı" (dataviz kuralı).
+     Hepsiburada (mor/eflatun, hue≈312°) etsy (283,6°) ile shopier (343,0°)
+     arasındaki en geniş boşluğa yerleştirildi — n11-shopify arası (sarı-yeşil)
+     ve shopify-amazon arası (camgöbeği) ISIK modunda mükemmel sonuç verirken
+     KARANLIK modda hiçbir hue/L/C kombinasyonu normal-görüş eşiğini (ΔE≥15)
+     geçemedi (tam 0-360° tarama ile doğrulandı — karanlık palet zaten mevcut
+     6 renkle ΔE≈15,1 tavanında, n11↔trendyol çifti kaynaklı, bu YENİ bir
+     sorun değil). Mor bölge, aynı tavanı YAKALAYAN (düşüRMEYEN) tek geniş
+     ve dengeli boşluk olduğu için seçildi; karanlıkta bu nedenle chroma
+     (~0,25) paletin geri kalanından (~0,11-0,18) belirgin şekilde yüksek —
+     bilinçli bir ödünleşim, bkz. research/hepsiburada-arastirmasi.md. Işık
+     modunda kontrast beyaz zemine karşı 2,67:1 — shopify (2,82) ile aynı
+     WARN bandında (aşağıdaki .result-card h3 notu burada da geçerli). */
   --accent-amazon: #2a78d6;
   --accent-trendyol: #eb6834;
   --accent-n11: #8a5f00;
+  --accent-hepsiburada: #c088e2;
   --accent-shopify: #1baf7a;
   --accent-shopier: #973c78;
   --accent-etsy: #4a3aa7;
@@ -69,10 +83,16 @@
    bir invert() değil, karanlık zemine göre AYRI seçilmiş bir çift (bkz.
    aşağıdaki node ile doğrulanmış L/C değerleri). Vurgu renkleri de aynı
    hue'ların karanlık banda (OKLCH L 0.48–0.67) göre yeniden doğrulanmış
-   kendi adımları — 10 Ağustos 2026'da scripts/validate_palette.js ile
-   kontrol edildi (6 renk aynı anda, --pairs all): CVD ayrımı ve normal
-   görüş eşiği geçti, kontrast tüm 6 vurgu için >=3:1. --chrome-* burada
-   KASITLI OLARAK tekrar tanımlanmıyor (yukarıdaki açıklamaya bakın). */
+   kendi adımları — 11 Ağustos 2026'da scripts/validate_palette.js ile
+   kontrol edildi (7 renk aynı anda, --pairs all): CVD ayrımı floor bandında
+   (worst-pair ΔE 6,4 — n11↔trendyol, Hepsiburada eklenmeden ÖNCE de aynı
+   çiftti) ve normal görüş eşiği (ΔE 15,1) geçti — ikisi de paletin zaten
+   var olan tavanı, Hepsiburada bunu düşürmüyor. Kontrast, n11 (2,94) ve
+   etsy (2,82) için önceden beri WARN bandında (metin --ink kullandığı için
+   zararsız, bkz. .result-card h3 yorumu) — Hepsiburada bu bandı PAYLAŞMIYOR,
+   3,31:1 ile 3:1 eşiğini geçiyor (ışık modunda ise 2,67 ile WARN bandında,
+   bkz. yukarıdaki :root notu). --chrome-* burada KASITLI OLARAK tekrar
+   tanımlanmıyor (yukarıdaki açıklamaya bakın). */
 body.dark-theme {
   --ink: #F1EEE4;
   --paper: #17160F;
@@ -86,6 +106,7 @@ body.dark-theme {
   --accent-amazon: #4890eb;
   --accent-trendyol: #e06535;
   --accent-n11: #955a00;
+  --accent-hepsiburada: #ae23e9;
   --accent-shopify: #009463;
   --accent-shopier: #cc66a7;
   --accent-etsy: #6056c0;
@@ -669,12 +690,13 @@ details.advanced[open] summary {
   margin-bottom: var(--space-3);
 }
 
-.platform-group.amazon   { --accent: var(--accent-amazon); }
-.platform-group.trendyol { --accent: var(--accent-trendyol); }
-.platform-group.n11      { --accent: var(--accent-n11); }
-.platform-group.shopify  { --accent: var(--accent-shopify); }
-.platform-group.shopier  { --accent: var(--accent-shopier); }
-.platform-group.etsy     { --accent: var(--accent-etsy); }
+.platform-group.amazon      { --accent: var(--accent-amazon); }
+.platform-group.trendyol    { --accent: var(--accent-trendyol); }
+.platform-group.n11         { --accent: var(--accent-n11); }
+.platform-group.hepsiburada { --accent: var(--accent-hepsiburada); }
+.platform-group.shopify     { --accent: var(--accent-shopify); }
+.platform-group.shopier     { --accent: var(--accent-shopier); }
+.platform-group.etsy        { --accent: var(--accent-etsy); }
 
 /* --- Özet: renkli kutu değil, tipografik ifade --- */
 
@@ -742,19 +764,21 @@ details.advanced[open] summary {
   --accent: var(--line-strong);
 }
 
-.result-card.amazon   { --accent: var(--accent-amazon); }
-.result-card.trendyol { --accent: var(--accent-trendyol); }
-.result-card.n11      { --accent: var(--accent-n11); }
-.result-card.shopify  { --accent: var(--accent-shopify); }
-.result-card.shopier  { --accent: var(--accent-shopier); }
-.result-card.etsy     { --accent: var(--accent-etsy); }
+.result-card.amazon      { --accent: var(--accent-amazon); }
+.result-card.trendyol    { --accent: var(--accent-trendyol); }
+.result-card.n11         { --accent: var(--accent-n11); }
+.result-card.hepsiburada { --accent: var(--accent-hepsiburada); }
+.result-card.shopify     { --accent: var(--accent-shopify); }
+.result-card.shopier     { --accent: var(--accent-shopier); }
+.result-card.etsy        { --accent: var(--accent-etsy); }
 
-.live-dot.amazon   { background: var(--accent-amazon); }
-.live-dot.trendyol { background: var(--accent-trendyol); }
-.live-dot.n11      { background: var(--accent-n11); }
-.live-dot.shopify  { background: var(--accent-shopify); }
-.live-dot.shopier  { background: var(--accent-shopier); }
-.live-dot.etsy     { background: var(--accent-etsy); }
+.live-dot.amazon      { background: var(--accent-amazon); }
+.live-dot.trendyol    { background: var(--accent-trendyol); }
+.live-dot.n11         { background: var(--accent-n11); }
+.live-dot.hepsiburada { background: var(--accent-hepsiburada); }
+.live-dot.shopify     { background: var(--accent-shopify); }
+.live-dot.shopier     { background: var(--accent-shopier); }
+.live-dot.etsy        { background: var(--accent-etsy); }
 
 .result-card h3 {
   /* Aynı kontrast gerekçesi: kimlik üstteki 3px renkli çizgiyle zaten
@@ -1125,6 +1149,79 @@ dialog::backdrop {
   color: var(--muted);
 }
 
+/* --- Kayıtlı ürünler: portföy özeti + sıralama/filtre --- */
+
+.saved-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.saved-summary-line {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.saved-summary-line strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.saved-platform-rank {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.saved-platform-rank li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.saved-platform-rank li span:nth-child(2) {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.saved-platform-rank li span:last-child {
+  margin-left: auto;
+}
+
+.saved-rank-empty {
+  color: var(--muted-2) !important;
+  font-style: italic;
+}
+
+.saved-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 480px) {
+  .saved-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.saved-controls .field {
+  margin-bottom: 0;
+}
+
 .saved-delete {
   position: absolute;
   top: var(--space-2);
@@ -1192,9 +1289,12 @@ summary:focus-visible {
      1440px'te sabitleniyor.
      10 Ağustos 2026: n11/Shopier eklenince kart sayısı 4'ten 6'ya çıktı.
      6 sütun bu genişlikte kartları çok daraltırdı (~144px, fiyat/breakdown
-     için yetersiz) — bunun yerine 3x2 düzen kullanılıyor (kart başına
-     ~300px, eski 4 sütunlu düzenden bile daha ferah). PLATFORM_ORDER ile
-     satır 1: amazon/trendyol/n11, satır 2: shopify/shopier/etsy. */
+     için yetersiz) — bunun yerine 3 sütunlu düzen kullanılıyor (kart başına
+     ~300px, eski 4 sütunlu düzenden bile daha ferah). 11 Ağustos 2026:
+     Hepsiburada eklenince kart sayısı 6'dan 7'ye çıktı — 3 sütun aynen
+     korundu (7, 3'e tam bölünmüyor ama grid otomatik sarıyor: satır 1
+     amazon/trendyol/n11, satır 2 hepsiburada/shopify/shopier, satır 3
+     tek başına etsy — PLATFORM_ORDER sırasıyla). */
   .page {
     max-width: 1440px;
   }
@@ -1448,4 +1548,162 @@ summary:focus-visible {
 
 .settings-plan-heading:first-child {
   margin-top: 0;
+}
+
+/* --- Toplu hesaplama paneli (11 Ağustos 2026) ---
+   .settings-section/.settings-panel ile AYNI aç/kapa deseni ve konumlandırma
+   (bkz. o bölümdeki yorum) — burada tekrarlanmıyor. Farklı olan tek şey
+   .bulk-panel-head: yan yana bir sıfırlama düğmesi yok, sadece başlık +
+   açıklama alt alta — bu yüzden .settings-panel-head'in display:flex'ini
+   MİRAS ALMIYOR (iki blok öğeyi yan yana dizerdi). */
+.bulk-section {
+  margin-top: var(--space-6);
+}
+
+.bulk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bulk-toggle svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.bulk-panel {
+  margin-top: var(--space-4);
+}
+
+.bulk-panel-head {
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.bulk-panel-head h2 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  margin-bottom: var(--space-2);
+}
+
+.bulk-panel-head .field-hint {
+  margin: 0;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.bulk-file-field {
+  flex: 1 1 240px;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+/* Yerel dosya seçici düğmesi diğer her yerdeki .btn-secondary ile aynı
+   görünsün diye — tarayıcı varsayılanı paletle çelişen tek unsur bu. Safari/
+   eski WebKit için ayrı önekli sözde öğe de gerekli (::file-selector-button
+   henüz her yerde desteklenmiyor). */
+.bulk-file-field input[type="file"] {
+  width: 100%;
+  padding: 6px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.bulk-file-field input[type="file"]::file-selector-button,
+.bulk-file-field input[type="file"]::-webkit-file-upload-button {
+  padding: 8px var(--space-3);
+  margin-right: var(--space-3);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bulk-file-field input[type="file"]:hover::file-selector-button,
+.bulk-file-field input[type="file"]:hover::-webkit-file-upload-button {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.bulk-status {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+/* --error zaten .result-card'daki zarar durumuyla aynı işlevsel anlamda
+   (bkz. dosya başındaki tasarım ilkesi: renk sadece işlevsel yerde var) —
+   burada da "bu dosya/satır reddedildi" anlamında, yeni bir ton icat
+   edilmedi. */
+.bulk-status.is-error {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.bulk-results-wrap {
+  margin-top: var(--space-2);
+}
+
+.bulk-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.bulk-results-head .field-hint {
+  margin: 0;
+}
+
+.bulk-results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
+.bulk-results-actions .btn-secondary {
+  padding: 7px var(--space-3);
+  font-size: 0.8rem;
+}
+
+/* Platform fiyat sütunları .settings-table'ın varsayılan sola dayalı
+   hücrelerinden farklı olarak sağa dayalı — 7 platformun fiyatını dikey
+   olarak karşılaştırmak (aynı basamak hizası) ürün adı/sektör metin
+   sütunlarından farklı bir okuma amacına hizmet ediyor. İlk iki sütun
+   (ürün adı, sektör) hariç. */
+.bulk-table th:not(:first-child):not(:nth-child(2)),
+.bulk-table td:not(:first-child):not(:nth-child(2)) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "En ucuz" platform vurgusu — ana formun özet metnindeki (<strong>, satır
+   ~288) AYNI kalın-yazı deseni, yeni bir renk icat edilmedi (7 platformdan
+   hangisinin ucuz olduğu satır satır değiştiği için tek bir sabit vurgu
+   rengi zaten anlamsız olurdu — .accent-* renkleri KİMLİK taşır, "kazanan"
+   durumunu değil). */
+.bulk-cheapest {
+  font-weight: 700;
+}
+
+.bulk-row-error th,
+.bulk-row-error td {
+  color: var(--error);
 }

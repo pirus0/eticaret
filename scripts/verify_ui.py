@@ -45,7 +45,7 @@ def main():
         check("Sektor secenekleri yuklendi", sector_options > 5, f"{sector_options} secenek")
 
         cards = page.query_selector_all(".result-card")
-        check("6 platform karti render edildi", len(cards) == 6, f"{len(cards)} kart")
+        check("7 platform karti render edildi", len(cards) == 7, f"{len(cards)} kart")
 
         prices = page.eval_on_selector_all(".result-card .price", "els => els.map(e => e.textContent)")
         check("Tum kartlarda fiyat var", all(p.strip() not in ("", "—") for p in prices), str(prices))
@@ -54,10 +54,10 @@ def main():
         check("Live-bar dolu", len(live_bar_text.strip()) > 0, live_bar_text[:80])
 
         border_colors = page.eval_on_selector_all(".result-card", "els => els.map(e => getComputedStyle(e).borderTopColor)")
-        check("6 kartin ust kenarligi 6 farkli renk", len(set(border_colors)) == 6, str(border_colors))
+        check("7 kartin ust kenarligi 7 farkli renk", len(set(border_colors)) == 7, str(border_colors))
 
         group_classes = page.eval_on_selector_all(".platform-group", "els => els.map(e => e.className)")
-        check("6 platform grubu var", len(group_classes) == 6, str(group_classes))
+        check("7 platform grubu var", len(group_classes) == 7, str(group_classes))
 
         old_price = page.eval_on_selector(".result-card .price", "e => e.textContent")
         cost_input = page.query_selector("#cost")
@@ -440,6 +440,125 @@ def main():
         empty_hidden = page.eval_on_selector("#savedEmpty", "el => getComputedStyle(el).display")
         check("Bos-durum mesaji kayit varken gizli", empty_hidden == "none", empty_hidden)
 
+        # ============== KAYITLI ÜRÜNLER PANOSU (özet + sıralama/filtre) ==============
+        # Tek kayıtla (yukarıdaki UI akışıyla eklenen) anlamlı bir sıralama/filtre
+        # testi yapılamaz — KHStore'a doğrudan (computeAll ile GERÇEK sonuçlar
+        # üretilerek) 2 sentetik kayıt daha ekleniyor, farklı sektör + farklı
+        # birim kâr sırası garanti edilecek şekilde. Testler bitince ikisi de
+        # silinip panel orijinal (tek kayıtlı) haline döndürülüyor ki aşağıdaki
+        # "Silme" testi (tek kart bekliyor) bozulmasın.
+        panel_toolbar_hidden_before = page.eval_on_selector("#savedToolbar", "el => el.hidden")
+        check("Tek kayitla panosu (toolbar) HENUZ gizli degil (1 kayit da gosterilir)", panel_toolbar_hidden_before is False, panel_toolbar_hidden_before)
+        page.click("#savedPanelClose")
+        page.wait_for_timeout(200)
+
+        seed = page.evaluate("""
+            () => {
+              var specs = [
+                { name: 'Test Panosu B', sectorId: 'telefon', costTRY: 200, marginPct: 15, prioritySite: 'trendyol' },
+                { name: 'Test Panosu C', sectorId: 'ayakkabi', costTRY: 50, marginPct: 30, prioritySite: 'amazon' }
+              ];
+              var chain = Promise.resolve();
+              var out = [];
+              specs.forEach(function (spec) {
+                var input = { costTRY: spec.costTRY, sectorId: spec.sectorId, marginPct: spec.marginPct,
+                  kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', etsyPaymentPct: 4,
+                  etsyOffsiteAds: false, etsyOverThreshold: false, monthlyUnits: 0 };
+                var results = KH.computeAll(input);
+                var rec = { name: spec.name, prioritySite: spec.prioritySite, image: null,
+                  createdAt: Date.now(), input: input, results: results };
+                chain = chain.then(function () { return KHStore.addItem(rec); }).then(function (id) {
+                  out.push({ id: id, name: spec.name, sectorId: spec.sectorId,
+                    birimKarTRY: results[spec.prioritySite] ? results[spec.prioritySite].birimKarTRY : null });
+                });
+              });
+              return chain.then(function () { return out; });
+            }
+        """)
+        check("2 sentetik kayit KHStore'a eklendi", len(seed) == 2 and all(s["birimKarTRY"] is not None for s in seed), seed)
+
+        record_a_sector = db_item["input"]["sectorId"]
+        record_a_birim_kar = db_item["results"]["shopify"]["birimKarTRY"]
+        by_name = {"Test Ürünü — Kışlık Kaban": record_a_birim_kar}
+        for s in seed:
+            by_name[s["name"]] = s["birimKarTRY"]
+        expected_desc = [n for n, _ in sorted(by_name.items(), key=lambda kv: -kv[1])]
+        expected_asc = list(reversed(expected_desc))
+
+        page.click("#savedListBtn")
+        page.wait_for_timeout(400)
+        saved_cards_3 = page.query_selector_all(".saved-card")
+        check("3 kayitla panelde 3 kart gorunuyor", len(saved_cards_3) == 3, len(saved_cards_3))
+
+        toolbar_hidden_3 = page.eval_on_selector("#savedToolbar", "el => el.hidden")
+        check("3 kayitla ozet panosu (toolbar) GORUNUYOR", toolbar_hidden_3 is False, toolbar_hidden_3)
+        summary_count = page.eval_on_selector("#savedSummaryCount", "el => el.textContent")
+        check("Ozet: toplam urun sayisi dogru", summary_count == "3", summary_count)
+        summary_birimkar = page.eval_on_selector("#savedSummaryBirimKar", "el => el.textContent")
+        check("Ozet: toplam birim kar bos/tire DEGIL (3 urunun 3'u de hesaplanabilir)", summary_birimkar != "—", summary_birimkar)
+        rank_items = page.query_selector_all("#savedPlatformRank li")
+        check("Platform siralamasinda en az 1 satir var ('hesaplanamiyor' fallback'i degil)",
+              len(rank_items) > 0 and "saved-rank-empty" not in (page.eval_on_selector("#savedPlatformRank li", "el => el.className") or ""),
+              len(rank_items))
+
+        # Sirala: birim kar yuksek -> dusuk
+        page.select_option("#savedSortSelect", "profit-desc")
+        page.wait_for_timeout(200)
+        names_desc = page.eval_on_selector_all(".saved-card h4", "els => els.map(e => e.textContent)")
+        check("Sirala (birim kar yuksek->dusuk) dogru sirada", names_desc == expected_desc, f"{names_desc} beklenen {expected_desc}")
+
+        # Sirala: birim kar dusuk -> yuksek (tersi)
+        page.select_option("#savedSortSelect", "profit-asc")
+        page.wait_for_timeout(200)
+        names_asc = page.eval_on_selector_all(".saved-card h4", "els => els.map(e => e.textContent)")
+        check("Sirala (birim kar dusuk->yuksek) onceki siranin TAM TERSI", names_asc == expected_asc, f"{names_asc} beklenen {expected_asc}")
+
+        # Sektore gore filtrele: sadece orijinal (UI'dan kaydedilen) kaydin sektoru
+        page.select_option("#savedSectorFilter", record_a_sector)
+        page.wait_for_timeout(200)
+        filtered_cards = page.query_selector_all(".saved-card")
+        check("Sektor filtresi listeyi 1 karta daraltiyor", len(filtered_cards) == 1, len(filtered_cards))
+        filtered_summary_count = page.eval_on_selector("#savedSummaryCount", "el => el.textContent")
+        check("Sektor filtresi ozet sayisini da guncelliyor", filtered_summary_count == "1", filtered_summary_count)
+
+        # Filtreyi kaldir -> 3'e geri donmeli
+        page.select_option("#savedSectorFilter", "")
+        page.wait_for_timeout(200)
+        unfiltered_cards = page.query_selector_all(".saved-card")
+        check("Filtre kaldirilinca 3 karta geri donuyor", len(unfiltered_cards) == 3, len(unfiltered_cards))
+
+        # Hicbir kayitla eslesmeyen bir filtre (elle enjekte edilen sahte secenek) ->
+        # "kayit yok" mesaji sektor-filtreli VARYANTI gostermeli (genel bos mesajdan FARKLI).
+        empty_msg_none = page.eval_on_selector("#savedEmpty", "el => el.textContent")
+        page.evaluate("""
+            () => {
+              var opt = document.createElement('option');
+              opt.value = 'hic-boyle-bir-sektor-yok';
+              opt.textContent = '(test)';
+              document.getElementById('savedSectorFilter').appendChild(opt);
+              document.getElementById('savedSectorFilter').value = 'hic-boyle-bir-sektor-yok';
+              document.getElementById('savedSectorFilter').dispatchEvent(new Event('change'));
+            }
+        """)
+        page.wait_for_timeout(200)
+        zero_match_cards = page.query_selector_all(".saved-card")
+        check("Eslesmeyen filtrede 0 kart kaliyor", len(zero_match_cards) == 0, len(zero_match_cards))
+        zero_match_toolbar_hidden = page.eval_on_selector("#savedToolbar", "el => el.hidden")
+        check("Eslesmeyen filtrede ozet panosu tekrar gizleniyor", zero_match_toolbar_hidden is True, zero_match_toolbar_hidden)
+        empty_msg_filtered = page.eval_on_selector("#savedEmpty", "el => el.textContent")
+        check("Eslesmeyen filtrede bos-durum mesaji GENEL mesajdan FARKLI (sektore ozel yonlendirme)",
+              empty_msg_filtered != empty_msg_none and "sektörde" in empty_msg_filtered, empty_msg_filtered)
+
+        # Temizlik: sentetik 2 kaydi sil, filtreyi sifirla — asagidaki "Silme" testi
+        # tek (orijinal) kaydi bekliyor.
+        page.evaluate("(ids) => Promise.all(ids.map(id => KHStore.deleteItem(id)))", [s["id"] for s in seed])
+        page.click("#savedPanelClose")
+        page.wait_for_timeout(200)
+        page.click("#savedListBtn")
+        page.wait_for_timeout(300)
+        cleanup_cards = page.query_selector_all(".saved-card")
+        check("Temizlik sonrasi tekrar 1 kayit kaldi (sonraki silme testi icin)", len(cleanup_cards) == 1, len(cleanup_cards))
+
         # Silme
         page.click(".saved-delete")
         page.wait_for_timeout(400)
@@ -524,6 +643,15 @@ def main():
         sector_rows = page.eval_on_selector_all("#settingsSectorsBody tr", "els => els.length")
         check("Sektor tablosunda KH.SECTORS ile ayni sayida satir (31)", sector_rows == 31, sector_rows)
 
+        sector_headers = page.eval_on_selector_all(".settings-table thead th", "els => els.map(e => e.textContent)")
+        check("Sektor tablosunda 4. sutun Hepsiburada (%)", sector_headers == ["Sektör", "Amazon (%)", "Trendyol (%)", "n11 (%)", "Hepsiburada (%)"], sector_headers)
+
+        giyim_hepsiburada_inputs = page.eval_on_selector_all("input[data-section='sectors'][data-key='giyim'][data-subkey='hepsiburada']", "els => els.length")
+        check("Duz sektor (giyim) Hepsiburada hucresinde tek alan var", giyim_hepsiburada_inputs == 1, giyim_hepsiburada_inputs)
+
+        diger_hepsiburada_placeholder = page.eval_on_selector("input[data-section='sectors'][data-key='diger'][data-subkey='hepsiburada']", "e => e.placeholder")
+        check("Eslesmeyen sektorde (diger) Hepsiburada hucresi '-' placeholder gosteriyor (yine de duzenlenebilir)", diger_hepsiburada_placeholder == "—", diger_hepsiburada_placeholder)
+
         taki_amazon_inputs = page.eval_on_selector_all(
             "input[data-section='sectors'][data-key='taki'].settings-tiered, input[data-section='sectors'][data-key='taki'][data-subkey^='amazon']",
             "els => els.length")
@@ -542,6 +670,21 @@ def main():
               trendyol_before != trendyol_after, f"{trendyol_before} -> {trendyol_after}")
         check("Ayarlardan sektor Trendyol orani Amazon fiyatini ETKILEMIYOR (izolasyon)",
               amazon_before_sect == amazon_after_sect, f"{amazon_before_sect} -> {amazon_after_sect}")
+
+        # --- Sektor override: giyim/Hepsiburada degistirince SADECE Hepsiburada karti
+        # etkilenmeli (11 Agustos 2026, 4. tur) ---
+        hepsiburada_before = page.eval_on_selector(".result-card.hepsiburada .price", "e => e.textContent")
+        n11_before_sect = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        page.fill("input[data-section='sectors'][data-key='giyim'][data-subkey='hepsiburada']", "40")
+        page.wait_for_timeout(200)
+        hepsiburada_after = page.eval_on_selector(".result-card.hepsiburada .price", "e => e.textContent")
+        n11_after_sect = page.eval_on_selector(".result-card.n11 .price", "e => e.textContent")
+        check("Ayarlardan sektor Hepsiburada orani degistirince Hepsiburada fiyati degisiyor",
+              hepsiburada_before != hepsiburada_after, f"{hepsiburada_before} -> {hepsiburada_after}")
+        check("Ayarlardan sektor Hepsiburada orani n11 fiyatini ETKILEMIYOR (izolasyon)",
+              n11_before_sect == n11_after_sect, f"{n11_before_sect} -> {n11_after_sect}")
+        page.fill("input[data-section='sectors'][data-key='giyim'][data-subkey='hepsiburada']", "")
+        page.wait_for_timeout(200)
 
         sectors_badge_visible = page.eval_on_selector("[data-badge-section='sectors']", "el => !el.hidden")
         toggle_dot_visible = page.eval_on_selector("#settingsToggleDot", "el => !el.hidden")
@@ -664,10 +807,160 @@ def main():
         results_position = wide.eval_on_selector(".layout-results", "el => getComputedStyle(el).position")
         check("Sonuc paneli sticky", results_position == "sticky", results_position)
         col_count = wide.eval_on_selector("#results", "el => getComputedStyle(el).gridTemplateColumns.split(' ').length")
-        check("1400px genislikte 3 sonuc karti yan yana (6 kart, 3x2)", col_count == 3, col_count)
+        check("1400px genislikte 3 sonuc karti yan yana (7 kart, 3+3+1)", col_count == 3, col_count)
         page_width = wide.eval_on_selector(".page", "el => el.getBoundingClientRect().width")
         check("1400px genislikte .page 1180px sabitinden genisledi (3 sutuna yer acmak icin)", page_width > 1180, page_width)
         wide.screenshot(path="verify_screenshot_wide.png", full_page=True)
+
+        # ============== TOPLU HESAPLAMA (11 Agustos 2026) ==============
+        # Ayni 'wide' page uzerinde devam ediyor (temiz durum -- mobil sayfadaki
+        # onceki testlerin biriktirdigi ayarlar/override'lardan etkilenmesin,
+        # ama panel/CSV etkilesimi genis ekranda mobil'den daha dogal).
+        import csv as _csv
+        import io as _io
+        import tempfile as _tempfile
+        import os as _os2
+
+        bulk_hidden_initially = wide.eval_on_selector("#bulkPanel", "el => el.hidden")
+        check("Toplu hesaplama paneli baslangicta kapali", bulk_hidden_initially)
+        wide.click("#bulkToggleBtn")
+        wide.wait_for_timeout(200)
+        bulk_open = wide.eval_on_selector("#bulkPanel", "el => !el.hidden && getComputedStyle(el).display !== 'none'")
+        bulk_aria = wide.eval_on_selector("#bulkToggleBtn", "el => el.getAttribute('aria-expanded')")
+        check("Toplu hesaplama butonuna basinca panel GERCEKTEN aciliyor", bulk_open)
+        check("Panel acilinca aria-expanded=true", bulk_aria == "true", bulk_aria)
+
+        # --- Sablon indirme: BOM'lu, basliklar dogru, virgullu sektor alani tirnaklanmis ---
+        with wide.expect_download() as dl_info:
+            wide.click("#bulkTemplateBtn")
+        template_path = dl_info.value.path()
+        with open(template_path, "rb") as f:
+            template_bytes = f.read()
+        check("Sablon CSV UTF-8 BOM ile basliyor", template_bytes[:3] == b"\xef\xbb\xbf")
+        template_rows = list(_csv.reader(_io.StringIO(template_bytes.decode("utf-8-sig"))))
+        check("Sablon basligi beklenen sutunlarla eslesiyor",
+              template_rows[0] == ["Ürün Adı", "Maliyet (₺)", "Sektör", "Hedef Kâr (%)", "Kargo (₺)", "Reklam (₺)", "Aylık Adet"],
+              template_rows[0])
+        check("Sablonda ornek urun satirlari var (>=3)", len(template_rows) - 1 >= 3, len(template_rows) - 1)
+        comma_sector_rows = [r for r in template_rows if len(r) > 2 and "," in r[2]]
+        check("Virgul iceren sektor adi tek hucrede kaliyor (dogru tirnaklama/ayristirma)",
+              len(comma_sector_rows) >= 1, comma_sector_rows)
+
+        # --- Referans (oracle): ana formu sablonun 1. satiriyla (Kışlık Mont:
+        # maliyet=450, sektor=giyim, marj=25, aylik=20; kargo/reklam sablonda
+        # BOS -- ana formun O AN gecerli degerlerini miras almali) AYNI degerlere
+        # getirip 7 platform fiyatini oku. Bulk motoru render'i DEGIL, ana formun
+        # KENDI (zaten test edilmis) readInput()/computeAll() yolunu kullaniyor. ---
+        wide.fill("#cost", "450")
+        wide.select_option("#sector", "giyim")
+        margin_wide = wide.query_selector("#margin")
+        margin_wide.click(click_count=3)
+        margin_wide.type("25")
+        wide.fill("#monthlyUnits", "20")
+        wide.wait_for_timeout(250)
+        platforms = ["amazon", "trendyol", "n11", "hepsiburada", "shopify", "shopier", "etsy"]
+        oracle_prices = {p: wide.eval_on_selector(f".result-card.{p} .price", "e => e.textContent") for p in platforms}
+
+        # --- Sablonu geri yukle: 3 satir da hesaplanmali; 1. satir (Kışlık Mont)
+        # yukaridaki referansla BIREBIR eslesmeli (ayni sirada, PLATFORM_ORDER). ---
+        wide.set_input_files("#bulkFileInput", template_path)
+        wide.wait_for_timeout(400)
+        bulk_summary_1 = wide.eval_on_selector("#bulkResultsSummary", "el => el.textContent")
+        check("3 satirlik gecerli sablonun ucu de hesaplandi", "3 ürün hesaplandı" in bulk_summary_1, bulk_summary_1)
+        row0_cells = wide.eval_on_selector_all(
+            "#bulkResultsBody tr:first-child td", "tds => tds.map(td => td.textContent)")
+        row0_platform_prices = dict(zip(platforms, row0_cells[1:]))
+        check("Toplu tablonun 1. satiri, ana formun BAGIMSIZ hesapladigi referansla 7 platformda da BIREBIR eslesiyor",
+              row0_platform_prices == oracle_prices, f"beklenen={oracle_prices} gelen={row0_platform_prices}")
+
+        cheapest_cells_row0 = wide.eval_on_selector_all(
+            "#bulkResultsBody tr:first-child td.bulk-cheapest", "els => els.length")
+        check("1. satirda tam olarak 1 hucre 'en ucuz' (bulk-cheapest) olarak isaretli", cheapest_cells_row0 == 1, cheapest_cells_row0)
+
+        # --- Zorunlu sutun eksik: TUM dosya reddedilmeli, sonuc tablosu gizli kalmali. ---
+        missing_col_path = _os2.path.join(_tempfile.gettempdir(), "kh_verify_bulk_missing.csv")
+        with open(missing_col_path, "w", encoding="utf-8") as f:
+            f.write("Ürün Adı,Maliyet (₺),Hedef Kâr (%)\nTest,100,20\n")
+        wide.set_input_files("#bulkFileInput", missing_col_path)
+        wide.wait_for_timeout(300)
+        bulk_status_error = wide.eval_on_selector("#bulkStatus", "el => !el.hidden && el.classList.contains('is-error')")
+        bulk_status_text = wide.eval_on_selector("#bulkStatus", "el => el.textContent")
+        bulk_results_hidden_after_error = wide.eval_on_selector("#bulkResultsWrap", "el => el.hidden")
+        check("Zorunlu sutun (sektor) eksik CSV'de hata mesaji gosteriliyor", bulk_status_error, bulk_status_text)
+        check("Eksik sutunlu CSV'de sonuc tablosu gizli kaliyor", bulk_results_hidden_after_error)
+        check("Hata mesaji eksik sutunun adini iceriyor",
+              "sektör" in bulk_status_text.lower(), bulk_status_text)
+
+        # --- Karisik gecerli/gecersiz satirlar: iyi satir hesaplanmali, kotu
+        # satirlar KENDI hatasiyla isaretlenmeli, biri digerini ENGELLEMEMELI. ---
+        mixed_path = _os2.path.join(_tempfile.gettempdir(), "kh_verify_bulk_mixed.csv")
+        with open(mixed_path, "w", encoding="utf-8") as f:
+            f.write(
+                "Ürün Adı,Maliyet (₺),Sektör,Hedef Kâr (%),Kargo (₺),Reklam (₺),Aylık Adet\n"
+                "İyi Ürün,200,Giyim,25,,,\n"
+                "Kötü Maliyet,abc,Giyim,25,,,\n"
+                "Kötü Sektör,150,Var Olmayan Sektör XYZ,25,,,\n"
+            )
+        wide.set_input_files("#bulkFileInput", mixed_path)
+        wide.wait_for_timeout(300)
+        mixed_summary = wide.eval_on_selector("#bulkResultsSummary", "el => el.textContent")
+        check("Karisik dosyada ozet '1 hesaplandi, 2 hatali' diyor", "1 ürün hesaplandı" in mixed_summary and "2 satırda hata" in mixed_summary, mixed_summary)
+        error_row_classes = wide.eval_on_selector_all("#bulkResultsBody tr", "trs => trs.map(tr => tr.className)")
+        check("Karisik dosyada satir sirasi: iyi(bos)/hatali/hatali", error_row_classes == ["", "bulk-row-error", "bulk-row-error"], error_row_classes)
+        bad_cost_error_text = wide.eval_on_selector("#bulkResultsBody tr:nth-child(2) td", "el => el.textContent")
+        check("Gecersiz maliyet satirinda dogru hata metni gosteriliyor", "Maliyet geçersiz" in bad_cost_error_text, bad_cost_error_text)
+        bad_sector_error_text = wide.eval_on_selector("#bulkResultsBody tr:nth-child(3) td", "el => el.textContent")
+        check("Bulunamayan sektor satirinda dogru hata metni gosteriliyor", "Sektör bulunamadı" in bad_sector_error_text, bad_sector_error_text)
+
+        # --- Noktali virgul ayracli + Turkce ondalikli ("120,50") CSV de dogru ayristirilmali. ---
+        semi_path = _os2.path.join(_tempfile.gettempdir(), "kh_verify_bulk_semi.csv")
+        with open(semi_path, "w", encoding="utf-8") as f:
+            f.write(
+                "Ürün Adı;Maliyet (₺);Sektör;Hedef Kâr (%);Kargo (₺);Reklam (₺);Aylık Adet\n"
+                "Noktalı Virgül Testi;120,50;Giyim;22;;;\n"
+            )
+        wide.set_input_files("#bulkFileInput", semi_path)
+        wide.wait_for_timeout(300)
+        semi_summary = wide.eval_on_selector("#bulkResultsSummary", "el => el.textContent")
+        check("Noktali virgul ayracli + Turkce ondalikli CSV basariyla hesaplaniyor", "1 ürün hesaplandı" in semi_summary, semi_summary)
+
+        # --- Izolasyon: ana formdaki degisiklik otomatik yansimamali; 'Yeniden
+        # hesapla' ELLE tetiklenince yansimali (bkz. #bulkPanel recalc-loop haric tutma). ---
+        wide.set_input_files("#bulkFileInput", template_path)
+        wide.wait_for_timeout(300)
+        row0_amazon_before_ads = wide.eval_on_selector("#bulkResultsBody tr:first-child td:nth-child(3)", "el => el.textContent")
+        ads_wide = wide.query_selector("#ads")
+        ads_wide.click(click_count=3)
+        ads_wide.type("500")
+        wide.wait_for_timeout(200)
+        row0_amazon_no_auto = wide.eval_on_selector("#bulkResultsBody tr:first-child td:nth-child(3)", "el => el.textContent")
+        check("Ana formdaki degisiklik toplu tabloyu OTOMATIK guncellemiyor (izolasyon)",
+              row0_amazon_no_auto == row0_amazon_before_ads, f"{row0_amazon_before_ads} -> {row0_amazon_no_auto}")
+        wide.click("#bulkRecalcBtn")
+        wide.wait_for_timeout(300)
+        row0_amazon_after_recalc = wide.eval_on_selector("#bulkResultsBody tr:first-child td:nth-child(3)", "el => el.textContent")
+        check("'Yeniden hesapla' ana formdaki degisikligi yansitiyor",
+              row0_amazon_after_recalc != row0_amazon_before_ads, f"{row0_amazon_before_ads} -> {row0_amazon_after_recalc}")
+        ads_wide.click(click_count=3)
+        ads_wide.type("0")
+        wide.wait_for_timeout(200)
+
+        # --- Disa aktarma: indirilen CSV'de 'Hata' sutunu + hatali satirlarda
+        # bos fiyat hucreleri + gecerli satirda dogru sayisal deger olmali. ---
+        wide.set_input_files("#bulkFileInput", mixed_path)
+        wide.wait_for_timeout(300)
+        with wide.expect_download() as export_dl_info:
+            wide.click("#bulkExportBtn")
+        export_path = export_dl_info.value.path()
+        with open(export_path, "rb") as f:
+            export_bytes = f.read()
+        check("Disa aktarilan CSV UTF-8 BOM ile basliyor", export_bytes[:3] == b"\xef\xbb\xbf")
+        export_rows = list(_csv.reader(_io.StringIO(export_bytes.decode("utf-8-sig"))))
+        check("Disa aktarilan CSV basliginda 'Hata' sutunu var", export_rows[0][-1] == "Hata", export_rows[0])
+        check("Disa aktarilan CSV'de iyi satirin Amazon fiyati bos DEGIL", export_rows[1][2].strip() != "", export_rows[1])
+        check("Disa aktarilan CSV'de hatali satirin Amazon fiyati BOS", export_rows[2][2].strip() == "", export_rows[2])
+        check("Disa aktarilan CSV'de hatali satirin Hata sutunu dolu", export_rows[2][-1].strip() != "", export_rows[2][-1])
+
         wide.close()
 
         browser.close()

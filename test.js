@@ -245,6 +245,47 @@ var negN11KargoOverride = KH.computeAll({ costTRY: 100, sectorId: 'giyim', margi
 check('Negatif n11KargoOverrideTRY 0\'a kırpılıyor (eksi kargo maliyeti üretmiyor)',
       negN11KargoOverride.n11.price, KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', n11KargoOverrideTRY: 0 }).n11.price, 0.01);
 
+// --- 11 Ağustos 2026, 4. tur (Hepsiburada eklendi): kategori komisyonu testi.
+// n11'in aksine komisyondan ayrı bir sabit hizmet bedeli YOK (bkz. calc.js
+// SECTORS yorumu — hiçbir kaynakta somut bir ₺ rakamı bulunamadığı için
+// bilinçli olarak modellenmedi), bu yüzden fixed sadece maliyet+kargo+reklam. ---
+var hepsiburadaSector = KH.SECTORS.filter(function (s) { return s.id === 'giyim'; })[0];
+var hepsiburadaFixed = 100 + 50 + 0;
+var hepsiburadaPctTotal = (hepsiburadaSector.hepsiburada + 20) / 100;
+console.log('\n--- Hepsiburada, giyim, maliyet=100, kargo=50, hedefKâr=20% ---');
+console.log('Hepsiburada:', res.hepsiburada.price, 'kullanılan %', res.hepsiburada.usedPct);
+check('Hepsiburada fiyat (elle, kategori komisyonu, sabit hizmet bedeli YOK)', res.hepsiburada.price, hepsiburadaFixed / (1 - hepsiburadaPctTotal), 0.5);
+
+// Hepsiburada verisi olmayan bir sektörde ('diger' — resmi PDF'te uygun bir
+// eşleşme yok, bkz. calc.js SECTORS yorumu) unavailable dönmeli.
+var hepsiburadaNoData = KH.computeAll({ costTRY: 100, sectorId: 'diger', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+console.log('Hepsiburada (diğer, veri yok):', hepsiburadaNoData.hepsiburada.unavailable ? hepsiburadaNoData.hepsiburada.reason : hepsiburadaNoData.hepsiburada.price);
+if (!hepsiburadaNoData.hepsiburada.unavailable) { console.log('FAIL: Hepsiburada icin "unavailable" bekleniyordu (diğer sektöründe veri yok)'); failures++; }
+else console.log('OK   Hepsiburada veri-yok sektöründe doğru şekilde "unavailable" döndü');
+
+// override her zaman kazanmalı, veri olsun olmasın
+var hepsiburadaOverride = KH.computeAll({ costTRY: 100, sectorId: 'diger', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', hepsiburadaOverridePct: 15 });
+var hepsiburadaOverridePctTotal = (15 + 20) / 100;
+check('hepsiburadaOverridePct veri olmayan sektörde de kullanılıyor', hepsiburadaOverride.hepsiburada.price, hepsiburadaFixed / (1 - hepsiburadaOverridePctTotal), 0.5);
+
+// --- hepsiburadaKargoOverrideTRY: Trendyol/n11 ile aynı desen (kapalı/yarı-
+// kapalı anlaşmalı kargo listesi, bkz. research/hepsiburada-arastirmasi.md).
+// Girilirse paylaşılan kargoTRY yerine kullanılmalı; Amazon gibi izole
+// platformları ETKİLEMEMELİ. ---
+var hepsiburadaKargoBase = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic' });
+var hepsiburadaKargoOverridden = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', hepsiburadaKargoOverrideTRY: 200 });
+if (hepsiburadaKargoBase.hepsiburada.price === hepsiburadaKargoOverridden.hepsiburada.price) { console.log('FAIL: hepsiburadaKargoOverrideTRY fiyatı değiştirmedi'); failures++; }
+else console.log('OK   hepsiburadaKargoOverrideTRY girilince Hepsiburada fiyatı değişiyor');
+check('hepsiburadaKargoOverrideTRY paylaşılan kargoTRY yerine kullanılıyor (elle: kargo=200)',
+      hepsiburadaKargoOverridden.hepsiburada.price, (100 + 200 + 0) / (1 - hepsiburadaPctTotal), 0.5);
+if (hepsiburadaKargoBase.amazon.price !== hepsiburadaKargoOverridden.amazon.price) { console.log('FAIL: hepsiburadaKargoOverrideTRY Amazon fiyatını etkilememeli (platform bazlı izolasyon)'); failures++; }
+else console.log('OK   hepsiburadaKargoOverrideTRY Amazon fiyatını etkilemiyor (platform bazlı izolasyon)');
+if (hepsiburadaKargoBase.n11.price !== hepsiburadaKargoOverridden.n11.price) { console.log('FAIL: hepsiburadaKargoOverrideTRY n11 fiyatını etkilememeli (platform bazlı izolasyon)'); failures++; }
+else console.log('OK   hepsiburadaKargoOverrideTRY n11 fiyatını etkilemiyor (platform bazlı izolasyon)');
+var negHepsiburadaKargoOverride = KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', hepsiburadaKargoOverrideTRY: -5000 });
+check('Negatif hepsiburadaKargoOverrideTRY 0\'a kırpılıyor (eksi kargo maliyeti üretmiyor)',
+      negHepsiburadaKargoOverride.hepsiburada.price, KH.computeAll({ costTRY: 100, sectorId: 'giyim', marginPct: 20, kargoTRY: 50, reklamTRY: 0, shopifyPlanId: 'basic', hepsiburadaKargoOverrideTRY: 0 }).hepsiburada.price, 0.01);
+
 // --- Shopier kademeli oran testi (10 Ağustos 2026, dokümantasyon yazılırken
 // düzeltildi: Shopier'in kendi ana sayfası "%2,99'dan BAŞLAYAN" diyor — bu
 // sadece yüksek hacimli satıcılar için geçerli en iyi oran, ilk sürümde
@@ -277,7 +318,7 @@ check('monthlyProfitTRY = birimKarTRY × aylık adet', withMonthly.amazon.monthl
 // çözülür; birinin fiyatını başka birine vermek marjı DEĞİŞTİRİR, bu yüzden
 // round-trip her zaman "kendi fiyatı -> kendi marjı" şeklinde olmalı). ---
 console.log('\n--- Ters mod round-trip: ileri modun çözdüğü fiyat, ters moda verilince aynı hedef kâr marjını vermeli ---');
-['amazon', 'trendyol', 'n11', 'shopify', 'shopier', 'etsy'].forEach(function (key) {
+['amazon', 'trendyol', 'n11', 'hepsiburada', 'shopify', 'shopier', 'etsy'].forEach(function (key) {
   var fwd = res[key];
   if (!fwd || fwd.unavailable || fwd.error) { console.log('atlandı (veri yok):', key); return; }
   var rev = KH.computeAllFromPrice(input, fwd.price);
@@ -362,6 +403,15 @@ check('Sektör override uygulanıyor (giyim/trendyol -> 30)', sectorById(khA, 'g
 KHSettings.setValue(khA, 'sectors', 'giyim', 'trendyol', '');
 check('Boş değer override\'ı SİLİYOR, fabrikaya dönüyor (giyim/trendyol)', sectorById(khA, 'giyim').trendyol, 21.4, 0.001);
 
+// --- Hepsiburada sektör override + boş değerle geri alma (11 Ağustos 2026,
+// 4. tur) — n11'in üstündeki testle aynı desen, settings.js'in applyOverrides/
+// captureDefaults/restoreFactory'sine eklenen 3 ayrı dokunuşu doğruluyor. ---
+check('KHSettings.init() sonrası fabrika değerleri BOZULMADI (giyim/hepsiburada)', sectorById(khA, 'giyim').hepsiburada, 18, 0.001);
+KHSettings.setValue(khA, 'sectors', 'giyim', 'hepsiburada', '25');
+check('Sektör override uygulanıyor (giyim/hepsiburada -> 25)', sectorById(khA, 'giyim').hepsiburada, 25, 0.001);
+KHSettings.setValue(khA, 'sectors', 'giyim', 'hepsiburada', '');
+check('Boş değer override\'ı SİLİYOR, fabrikaya dönüyor (giyim/hepsiburada)', sectorById(khA, 'giyim').hepsiburada, 18, 0.001);
+
 // --- Kademeli (Amazon: taki/kozmetik/gıda) sektör override — kısmi override ---
 // (bkz. settings.js applyOverrides düzeltmesi: setValue'nun 2 seviyeli section->
 // key->subKey modeline sığdırmak için amazonThreshold/amazonLow/amazonHigh AYRI
@@ -383,6 +433,14 @@ check('saat/trendyol fabrikada null (veri yok)', sectorById(khA, 'saat').trendyo
 KHSettings.setValue(khA, 'sectors', 'saat', 'trendyol', '25');
 check('Daha önce null olan bir alana override girilebiliyor (saat/trendyol -> 25)', sectorById(khA, 'saat').trendyol, 25, 0.001);
 KHSettings.setValue(khA, 'sectors', 'saat', 'trendyol', '');
+
+// Aynısı Hepsiburada için de geçerli olmalı — 'diger' sektöründe resmi PDF'te
+// uygun bir eşleşme yok (bkz. calc.js SECTORS yorumu), ama kullanıcı kendi
+// panelinden öğrendiği oranı kalıcı bir varsayılan olarak girebilmeli.
+check('diger/hepsiburada fabrikada null (eşleşme yok)', sectorById(khA, 'diger').hepsiburada, null);
+KHSettings.setValue(khA, 'sectors', 'diger', 'hepsiburada', '12');
+check('Daha önce null olan bir alana override girilebiliyor (diger/hepsiburada -> 12)', sectorById(khA, 'diger').hepsiburada, 12, 0.001);
+KHSettings.setValue(khA, 'sectors', 'diger', 'hepsiburada', '');
 
 // --- KRİTİK REGRESYON: TEKİL SAYI sabitleri (obje/dizi DEĞİL) KH üzerinden
 // canlı mı okunuyor? 10 Ağustos 2026'da bulunan hataya göre calc.js bu 3

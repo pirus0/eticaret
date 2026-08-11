@@ -32,11 +32,16 @@
  * ama artık bu üç alan da diğerleri gibi gerçekten "canlı" okunuyor.
  *
  * Kapsam (kasıtlı olarak kısmi — kullanıcıyla netleştirildi, 10 Ağustos 2026):
- * sektör komisyon oranları (Amazon/Trendyol/n11), Trendyol/n11 hizmet
- * bedelleri, Shopier/Shopify/Etsy varsayılanları, döviz kuru. Kargo taşıyıcı
- * fiyat tabloları (6 firma × onlarca desi dilimi) KAPSAM DIŞI — halihazırda
- * "taşıyıcı seç + otomatik hesapla" sistemiyle yönetiliyor; ~60+ ek alan
- * eklemek paneli kullanılamaz hale getirirdi (kullanıcı bu ayrımı onayladı).
+ * sektör komisyon oranları (Amazon/Trendyol/n11/Hepsiburada — sonuncusu 11
+ * Ağustos 2026'da eklendi, bkz. research/hepsiburada-arastirmasi.md), Trendyol/
+ * n11 hizmet bedelleri, Shopier/Shopify/Etsy varsayılanları, döviz kuru.
+ * Hepsiburada'nın Trendyol/n11'in aksine bilinen bir SABİT hizmet bedeli
+ * rakamı yok (hiçbir kaynakta doğrulanamadı) — bu yüzden "fees" bölümünde
+ * Hepsiburada'ya özel bir alan YOK, sadece sektör oranı ayarlanabiliyor. Kargo
+ * taşıyıcı fiyat tabloları (6 firma × onlarca desi dilimi) KAPSAM DIŞI —
+ * halihazırda "taşıyıcı seç + otomatik hesapla" sistemiyle yönetiliyor; ~60+
+ * ek alan eklemek paneli kullanılamaz hale getirirdi (kullanıcı bu ayrımı
+ * onayladı).
  *
  * Depolama şekli KASITLI OLARAK SEYREK (sparse) — sadece kullanıcının
  * GERÇEKTEN değiştirdiği alanlar localStorage'a yazılıyor, her alanın tam bir
@@ -104,7 +109,7 @@
   function captureDefaults(KH) {
     var sectors = {};
     KH.SECTORS.forEach(function (s) {
-      sectors[s.id] = { amazon: cloneAmazonRate(s.amazon), trendyol: s.trendyol, n11: s.n11 };
+      sectors[s.id] = { amazon: cloneAmazonRate(s.amazon), trendyol: s.trendyol, n11: s.n11, hepsiburada: s.hepsiburada };
     });
     var plans = {};
     KH.SHOPIFY_PLANS.forEach(function (p) {
@@ -172,6 +177,10 @@
         if (o.n11 != null) {
           var n = clampPositive(o.n11);
           if (n != null) s.n11 = n;
+        }
+        if (o.hepsiburada != null) {
+          var h = clampPositive(o.hepsiburada);
+          if (h != null) s.hepsiburada = h;
         }
       });
     }
@@ -269,6 +278,7 @@
       s.amazon = cloneAmazonRate(d.amazon);
       s.trendyol = d.trendyol;
       s.n11 = d.n11;
+      s.hepsiburada = d.hepsiburada;
     });
     KH.TRENDYOL_HIZMET_BEDELI_TRY = defaults.fees.trendyolHizmetBedeliTRY;
     KH.N11_HIZMET_BEDELI_PCT = defaults.fees.n11HizmetBedeliPct;

@@ -1,8 +1,8 @@
 # Kâr Marjı Hesaplayıcı
 
-Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, n11, Shopify,
-Shopier ve Etsy'de o hedefe ulaşmak için gereken satış fiyatını — komisyon, kargo ve
-(opsiyonel) reklam giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir
+Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, n11,
+Hepsiburada, Shopify, Shopier ve Etsy'de o hedefe ulaşmak için gereken satış fiyatını —
+komisyon, kargo ve (opsiyonel) reklam giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir
 PWA (telefona "uygulama gibi" eklenebilen web aracı). Ters yönde de çalışır: elinizde
 zaten bir satış fiyatı varsa (ör. rakip fiyatı), o fiyatın hangi kâr marjına denk
 geldiğini de hesaplar.
@@ -33,15 +33,28 @@ research/              Oranların dayandığı kaynak notları (tarih + link + g
 
 ## Tasarım
 
-Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/n11/Shopify/Shopier/Etsy'yi
-ayırt eden 6 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan yok,
-"otomatik" seçilmiş bir SaaS-mor teması yok. O renkler de göz kararı seçilmedi:
+Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/n11/Hepsiburada/Shopify/Shopier/
+Etsy'yi ayırt eden 7 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan
+yok, "otomatik" seçilmiş bir SaaS-mor teması yok. O renkler de göz kararı seçilmedi:
 `dataviz` paletinin çift-çift-ayırt-edilebilirlik doğrulayıcısından geçirildi (gerçek
 marka renkleri denendiğinde Amazon/Trendyol/Etsy'nin üçü de turuncu ailesinde çıkıp
 `normal-vision ΔE 13.7` ile başarısız oldu — bkz. git geçmişindeki ilgili commit; n11/
 Shopier eklenirken de aynı doğrulayıcıdan geçirilip bronz/mürdüm tonlarında karar
 kılındı, çünkü altın/zeytin gibi doğal adaylar trendyol turuncusuyla CVD açısından
 ayırt edilemiyordu).
+
+**Hepsiburada rengi (11 Ağustos 2026):** mor/eflatun (`--accent-hepsiburada`, hue≈312°),
+etsy (283,6°) ile shopier (343,0°) arasındaki en geniş ve en dengeli boşluğa
+yerleştirildi. n11-shopify arası (sarı-yeşil) ve shopify-amazon arası (camgöbeği) IŞIK
+modunda daha iyi sonuç verdi (`normal-vision ΔE 16,3`, `CVD ΔE 9,2`, hedefin üzerinde)
+ama KARANLIK modda `validate_palette.js --pairs all` ile tam 0-360° taranınca hiçbir
+hue/L/C kombinasyonu normal-görüş eşiğini (ΔE≥15) geçemedi — karanlık palet zaten
+MEVCUT 6 renkle (n11↔trendyol çifti üzerinden) `ΔE≈15,1` tavanında olduğu için bu YENİ
+bir sorun değil, sadece Hepsiburada'nın bu tavanı DÜŞÜRMEMESİ gerekiyordu. Mor bölge
+aynı tavanı yakalayan tek geniş/dengeli boşluk olduğu için seçildi; bunun bedeli karanlık
+modda chroma'nın (~0,25) paletin geri kalanından (~0,11-0,18) belirgin şekilde yüksek
+olması — bilinçli bir ödünleşim. Detay için `styles.css`'teki `:root` ve
+`body.dark-theme` yorumlarına bakın.
 
 Başlıklar ve büyük fiyat rakamları serif (Georgia), arayüz elemanları sans —
 tek bir marka rengi yerine bu tipografik kontrastla "tasarlanmış" hissi kuruluyor.
@@ -64,7 +77,7 @@ tema değişse de HER ZAMAN koyu kalacak şekilde ayrı, sabit CSS değişkenler
 ## Kayıtlı ürünler
 
 Özet şeridindeki yer imi (bookmark) ikonuyla o anki hesaplama — ürün adı, satış için
-öncelikli platform, isteğe bağlı bir görsel ve 6 platformun da hesaplanan fiyatlarıyla
+öncelikli platform, isteğe bağlı bir görsel ve 7 platformun da hesaplanan fiyatlarıyla
 birlikte — kaydedilebiliyor. Header'daki (sağ üst) ikinci yer imi ikonu kayıtlı
 ürünler panelini açıyor; buradan inceleyip silebilirsiniz.
 
@@ -79,6 +92,19 @@ Görseller IndexedDB'ye yazılmadan önce tarayıcıda (canvas ile) en fazla 640
 uzunluğuna küçültülüp JPEG'e çevriliyor — telefon kamerasından gelen 5-10MB'lık bir
 fotoğraf veritabanını şişirmesin diye.
 
+**Portföy özeti (11 Ağustos 2026):** 2 veya daha fazla ürün kayıtlıyken panelin
+üstünde otomatik bir özet çıkıyor — toplam kayıtlı ürün sayısı, ürünlerin
+ÖNCELİKLİ platformundaki toplam birim kâr (₺), "Aylık tahmini satış adedi"
+doldurulmuş ürünler için toplam aylık kâr projeksiyonu, ve HER platform için
+(sadece öncelikli değil, hesaplanabildiği her üründe) ortalama birim kârı yüksekten
+düşüğe sıralayan bir liste — "kataloğumu hangi platformda satsam ortalama en
+kârlı" sorusuna tek bakışta cevap vermek için. Panelde ayrıca kartları eklenme
+tarihi/birim kâr/isme göre sıralayan ve sektöre göre daraltan iki seçim kutusu
+var; hem özet hem liste, aktif filtreye göre birlikte güncelleniyor. Yeni bir
+hesap yapılmıyor — sadece `calc.js`'in zaten her sonuç için ürettiği
+`birimKarTRY`/`monthlyProfitTRY` alanları kayıtlı ürünler genelinde toplanıp
+sıralanıyor.
+
 ## Kargo modeli (platform bazlı)
 
 Kargo tutarı artık tek bir paylaşılan alan değil — 10 Ağustos 2026'da yapılan
@@ -88,14 +114,16 @@ firması seçiminde birbirinden çok farklı kısıtlara sahip olduğunu ortaya 
 - **Amazon (satıcı-gönderimli) ve Shopify:** Kargo firması seçimi serbest —
   soldaki "Kargo" bölümündeki genel piyasa tutarı doğrudan geçerli. (Amazon
   Lojistik/FBA ve Amazon Kolay Gönderi farklı ücretlendirir, kapsam dışı.)
-- **Trendyol ve n11:** Satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo
+- **Trendyol, n11 ve Hepsiburada:** Satıcı, sözleşmesindeki KAPALI (Hepsiburada'da
+  yarı-kapalı, HepsiJET tercih ediliyor ama zorunlu değil) bir anlaşmalı kargo
   listesiyle sınırlı — serbest taşıyıcı seçimi yok (n11 için bu, n11'in kendi
   resmi destek merkezi sayfasıyla doğrulandı; ilk uygulama turunda n11'in
   serbest olduğu YANLIŞLIKLA varsayılmıştı, bkz.
-  `research/n11-shopier-gittigidiyor-arastirmasi.md`). Soldaki genel tutar
-  varsayılan/yön gösterici olarak kullanılıyor; "Platforma özel ayarlar →
-  Trendyol" ve "→ n11" içinde gerçek tutarınızı girebileceğiniz opsiyonel
-  birer "Kargo (₺)" alanı var.
+  `research/n11-shopier-gittigidiyor-arastirmasi.md`; Hepsiburada için bkz.
+  `research/hepsiburada-arastirmasi.md`). Soldaki genel tutar varsayılan/yön
+  gösterici olarak kullanılıyor; "Platforma özel ayarlar → Trendyol", "→ n11"
+  ve "→ Hepsiburada" içinde gerçek tutarınızı girebileceğiniz opsiyonel birer
+  "Kargo (₺)" alanı var.
 - **Shopier:** Anlaşmalı/indirimli kargo hizmeti Shopier'in kendi resmi
   yardım merkezi sayfasına göre bir seçenek, zorunlu değil — bu yüzden
   Amazon/Shopify gibi soldaki genel tutar doğrudan geçerli, ayrı bir override
@@ -262,15 +290,21 @@ Shopify, Etsy, Döviz kuru) bölünmüş. Amaç: `calc.js`'i elle düzenlemeden 
 oranlar/ücretler değiştikçe veya kullanıcının kendi panelindeki gerçek oran
 farklı olduğunda — kalıcı bir override girilebilmesi.
 
-- **Kapsam:** 31 sektörün tümü için Amazon/Trendyol/n11 komisyon oranı (Amazon'da
-  dilimli sektörler için eşik + iki basamak ayrı ayrı), Trendyol sabit hizmet
-  bedeli, n11 hizmet bedeli yüzdesi, Shopier komisyon/sabit ücret, Shopify'ın
-  plan başına aylık ücreti + dış ödeme sağlayıcı varsayılan oranı, Etsy'nin tüm
-  yüzde/sabit alanları, USD/EUR-TRY kuru. **Kapsam dışı (kasıtlı):** kargo
-  taşıyıcı/desi tabloları (`KH.CARGO`) — bu, ayrı bir öneri turunda kullanıcı
-  tarafından "Kargo hariç" seçilerek bilinçli olarak dışarıda bırakıldı; kargo
-  hâlâ sadece `calc.js`'te veya mevcut platforma-özel "Kargo (₺)" override
-  alanlarında değiştirilebiliyor.
+- **Kapsam:** 31 sektörün tümü için Amazon/Trendyol/n11/Hepsiburada komisyon oranı
+  (Amazon'da dilimli sektörler için eşik + iki basamak ayrı ayrı; Hepsiburada'da
+  2 sektörde — Hediye Kartı, Diğer — resmi kaynakta eşleşme olmadığı için hücre
+  boş/"—" görünür ama yine de doldurulabilir, bkz. aşağıdaki "Hepsiburada" bölümü),
+  Trendyol sabit hizmet bedeli, n11 hizmet bedeli yüzdesi, Shopier komisyon/sabit
+  ücret, Shopify'ın plan başına aylık ücreti + dış ödeme sağlayıcı varsayılan oranı,
+  Etsy'nin tüm yüzde/sabit alanları, USD/EUR-TRY kuru. Hepsiburada'nın Trendyol/n11
+  gibi sabit bir "hizmet bedeli" YOK (hiçbir kaynakta somut bir ₺ rakamı
+  bulunamadığı için bilinçli olarak modellenmedi) — bu yüzden "Hizmet bedelleri"
+  bölümünde Hepsiburada için ayrı bir alan yok, sadece sektör tablosundaki
+  komisyon sütunu ve platforma-özel "Kargo (₺)" override'ı var. **Kapsam dışı
+  (kasıtlı):** kargo taşıyıcı/desi tabloları (`KH.CARGO`) — bu, ayrı bir öneri
+  turunda kullanıcı tarafından "Kargo hariç" seçilerek bilinçli olarak dışarıda
+  bırakıldı; kargo hâlâ sadece `calc.js`'te veya mevcut platforma-özel
+  "Kargo (₺)" override alanlarında değiştirilebiliyor.
 - **Kalıcılık:** Girilen değerler `localStorage`'da (`kh-settings-v1` anahtarı)
   saklanıyor — sayfa yenilendiğinde veya tarayıcı kapatılıp açıldığında override'lar
   otomatik geri yükleniyor. Boş bırakılan bir alan o tekil değeri fabrika
@@ -315,6 +349,117 @@ farklı olduğunda — kalıcı bir override girilebilmesi.
   ve bölüm bazlı/genel sıfırlamanın birbirinden bağımsızlığını uçtan uca
   kontrol ediyor.
 
+## Hepsiburada (11 Ağustos 2026)
+
+Kullanıcıya "programı nasıl daha kullanışlı hale getirebiliriz?" sorusuna verilen
+cevap üzerine (bkz. yukarıdaki "Kayıtlı ürünler" bölümündeki "Portföy özeti" ve
+aşağıdaki "Toplu hesaplama" bölümü de aynı turun parçası) 4. büyük pazaryeri olarak
+Hepsiburada eklendi — sırasıyla Amazon, Trendyol/Shopify/Etsy, n11/Shopier'in ardından.
+Kullanıcının kendisine sunulan seçeneklerden **açıkça seçtiği** üç eklentiden
+biri; "Gerçekçi maliyet modeli" (döviz cinsinden maliyet girişi, paketleme/
+depolama maliyeti, platform bazlı iade oranı override'ları) SEÇİLMEDİ, bu yüzden
+bu turda çalışılmadı.
+
+- **Komisyon oranları:** Hepsiburada'nın kendi resmi kategori-bazlı komisyon
+  oranları PDF'inden (70+ alt kategori) — kaynağın kendisi YÜKSEK güven.
+  Uygulamanın 31 sektörüne eşlenirken (PDF'in kategori taksonomisi daha ince
+  taneli olduğu için) birden fazla alt kategori tek bir sektöre indirgendi —
+  bu adım ORTA güven; en kaba eşleme Otomotiv'de (14 alt kategori, %9-18 arası)
+  — override şiddetle önerilir. 2 sektörde (Dijital Hediye Kartı, Diğer) PDF'te
+  uygun bir eşleşme yok; ayarlar panelindeki sektör tablosunda bu hücreler boş/
+  "—" görünür ama yine de doldurulabilir (bkz. "Ayarlar paneli" bölümü yukarıda).
+  Tam eşleme tablosu ve PDF satır referansları için bkz.
+  `research/hepsiburada-arastirmasi.md`.
+- **KDV mekanizması:** Resmi PDF'in kendisi bu konuda dipnotuyla tek başına
+  belirsiz kaldı ("komisyonlar +KDV olarak hesaplanacaktır" — hangi tabana
+  uygulandığı açık değil). İkincil bir kaynaktaki somut bir örnek (200₺ × %18
+  = 36₺, başka ek adım yok) Trendyol/n11 ile aynı deseni doğruladı: oran
+  DOĞRUDAN fiyata uygulanıyor, Amazon'un `× 1,20` çarpanı YOK. ORTA-YÜKSEK
+  güven — bkz. "KDV nasıl hesaplanıyor?" bölümü, araştırma dosyasında.
+- **Sabit hizmet bedeli BİLİNÇLİ OLARAK EKLENMEDİ:** Trendyol/n11 gibi
+  komisyondan ayrı bir sabit ücretin var olduğu birden fazla kaynakta ima
+  edildi ama hiçbirinde somut bir ₺ rakamı yoktu — uydurma bir sayı eklemek
+  yerine bu kalem boş bırakıldı (aynı ilke, iade oranı/maliyeti alanlarında
+  daha önce de uygulanmıştı).
+- **Kargo:** Trendyol/n11 ile aynı desen — kapalı/yarı-kapalı bir anlaşmalı
+  taşıyıcı listesi (11 kayıtlı firma, HepsiJET tercih ediliyor ama zorunlu
+  değil). Soldaki genel kargo tutarı varsayılan olarak kullanılıyor;
+  "Platforma özel ayarlar → Hepsiburada → Kargo (₺)" alanından değiştirilebilir.
+- **Renk:** mor/eflatun (`--accent-hepsiburada`) — seçim gerekçesi için bkz.
+  yukarıdaki "Tasarım" bölümü.
+- **Mimari not (gelecekte 8. bir platform eklemek isteyenler için):**
+  `calc.js`'teki `birimKarTRY`/`monthlyProfitTRY` alanları HERHANGİ bir yeni
+  platform için otomatik/bedava çalışır (breakdown'da bir `{label:'Hedef kâr'}`
+  satırı olduğu sürece, ekstra kod gerekmez) ve sonuç kartı/canlı-nokta/
+  platform-grubu render'ı `PLATFORM_ORDER`/`PLATFORM_META`'ya (app.js) tek bir
+  satır eklemekle otomatik kurulur. Ama `settings.js`'in override katmanı
+  (`captureDefaults`/`applyOverrides`/`restoreFactory`) GENERİK DEĞİL —
+  yeni platformun sektör alanı için üçüne de elle birer satır eklemek
+  gerekiyor (bkz. Hepsiburada'nın bu üç fonksiyondaki karşılıkları). Renk de
+  otomatik değil: yeni bir `--accent-*` her seferinde `dataviz`
+  doğrulayıcısından (`--pairs all`, doğru dizi konumunda, hem açık hem
+  karanlık mod) geçirilmeli — bkz. yukarıdaki "Tasarım" bölümündeki
+  Hepsiburada notu, karanlık modun neden düşündüğünüzden daha sıkışık
+  olabileceğine dair somut bir örnek içeriyor.
+
+## Toplu hesaplama (11 Ağustos 2026)
+
+Aynı geri bildirim turunda (bkz. yukarıdaki "Hepsiburada" bölümü) kullanıcının
+açıkça seçtiği üçüncü eklenti: tek tek değil, bir kerede onlarca ürünü hesaplamak
+için CSV tabanlı bir toplu mod. Formun altında, "Ayarlar" düğmesinin hemen
+yanındaki "Toplu Hesaplama" düğmesiyle açılıyor.
+
+- **Akış:** "Şablon CSV indir" ile örnek satırlar içeren bir CSV iner, Excel/Google
+  E-Tablolar'da doldurulur, "CSV yükle" ile geri yüklenir. Her satır için 7
+  platformun da hesaplanan satış fiyatı tek bir tabloda, en ucuz platform
+  **kalın** yazıyla işaretlenmiş halde gösterilir. "Sonuçları CSV olarak indir"
+  ile bu tablo (hatalı satırlardaki hata mesajları dahil) dışa aktarılabilir.
+- **Sütunlar:** Zorunlu olanlar maliyet, sektör ve hedef kâr oranı — biri eksikse
+  o satır değil, **dosyanın tamamı** reddedilir (yanlış şablonla devam etmek
+  yerine kullanıcı doğru şablonu indirmeye yönlendirilir). Ürün adı opsiyonel
+  (boşsa "Satır N" olarak gösterilir); kargo, reklam gideri ve aylık satış adedi
+  de opsiyonel — bunlar boş bırakılırsa soldaki ana formda **o an girili olan
+  değer** kullanılır. Sütun başlıkları esnek eşleşiyor ("Maliyet (₺)", "maliyet",
+  "ürün maliyeti" hepsi aynı sütunu bulur) — şablonun kendisi değiştirilmeden
+  doldurulduğu sürece bu esneklik zaten devreye girmez, asıl amacı kullanıcının
+  kendi elle hazırladığı bir CSV'yi de kabul edebilmek.
+- **Platforma özel ayarlar TÜM satırlara aynı şekilde uygulanır:** Ayarlar
+  panelindeki sektör oranları, "Platforma özel ayarlar" override'ları, Shopify
+  planı, Etsy Offsite Ads durumu vb. — hiçbiri CSV'den satır satır
+  değiştirilemez, o an ana formda/ayarlarda ne geçerliyse bütün satırlara aynen
+  uygulanır. Satır bazında farklı bir komisyon oranı veya farklı bir platform
+  override'ı girme ihtiyacı olursa mevcut tasarımın kapsamı dışında kalıyor —
+  gerekirse ana formdaki ayarı değiştirip "Yeniden hesapla"ya basarak yeni bir
+  senaryo çalıştırılabilir.
+- **Format toleransı:** Türkçe Excel dışa aktarımlarının genelde kullandığı `;`
+  ayracı ile uluslararası `,` ayracı otomatik algılanıyor (başlık satırındaki
+  sayıma bakarak); ondalık sayılar da hücre bazında Türkçe (`25,5`) veya
+  uluslararası (`25.5`) biçimde kabul ediliyor. Virgül İÇEREN bir sektör adı
+  (ör. "Çanta, Bavul, Seyahat") tırnaklı hücre olarak doğru ayrıştırılıyor
+  (RFC4180'e yakın bir ayrıştırıcı — `app.js` içindeki `csvParseText`). Hem
+  okuma hem indirme UTF-8 BOM kullanıyor, Excel'in Türkçe karakterleri (ı, ğ,
+  ş, ö, ü, ç) bozmadan göstermesi için.
+- **Satır bazlı hata izolasyonu:** Zorunlu sütunlar dosyada MEVCUTSA ama tek bir
+  satırda geçersiz bir değer varsa (ör. sayısal olmayan maliyet, tabloda
+  bulunamayan bir sektör adı) sadece o satır kırmızı işaretlenip kendi hata
+  mesajıyla gösterilir, geri kalan satırların hesaplanmasını ENGELLEMEZ.
+- **Ana formdan bilinçli izolasyon:** Toplu tablo, ana formdaki bir alan
+  değiştiğinde OTOMATIK yeniden hesaplanmıyor — "Yeniden hesapla" düğmesine
+  basmak gerekiyor. Bu kasıtlı: onlarca satırı her tek tuş vuruşunda yeniden
+  hesaplamak performans açısından gereksiz, ayrıca kullanıcının tabloyu
+  "hangi ayarlarla hesaplandığını" net bilmesi (yarım bırakılmış bir form
+  değişikliğinin sessizce yansımaması) tercih edildi.
+- **Sektör eşleştirme:** Ana formdaki sektör arama kutusuyla (`handleSectorSearch`)
+  AYNI mantık — önce sektör id'siyle birebir, sonra etiketle birebir, sonra
+  etiket içinde geçme, üçü de Türkçe locale'e duyarlı küçük harfe çevirmeyle
+  (İ/I → i/ı doğru). "Giyim", "giyim" veya "Giy" hepsi aynı sektörü bulur.
+- **Test kapsamı:** `scripts/verify_ui.py`, toplu tablonun 1. satırını —
+  bulk render kodunun kendisini değil — ana formun aynı girdilerle bağımsız
+  ürettiği sonuçla (aynı `readInput()`/`KH.computeAll()` yolu) birebir
+  karşılaştırıyor; ayrıca eksik sütun, satır bazlı hata, `;` ayraçlı/Türkçe
+  ondalıklı dosya, izolasyon + "Yeniden hesapla" ve dışa aktarma senaryolarını
+  da kapsıyor.
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -350,16 +495,20 @@ değiştirip kaydetmeniz yeterli:
 
 - `KH.FX` — USD/TRY, EUR/TRY anlık kur değeri ve tarihi (Shopify/Etsy TL çevirisinde kullanılıyor).
 - `KH.CARGO` — Her taşıyıcı için desi bazlı fiyat aralıkları (Aras Kargo kasıtlı olarak yok).
-  Bu tablo Amazon/Shopify/Shopier/n11/Trendyol-varsayılanı için ortak; Trendyol'un ve
-  n11'in kendi override'ları (`trendyolKargoOverrideTRY` / `n11KargoOverrideTRY`) ve
-  Etsy'nin tamamen ayrı kargo alanı `computeAll()`'a doğrudan input olarak geçiliyor
-  (bkz. "Kargo modeli" bölümü yukarıda).
-- `KH.SECTORS` — Sektör başına Amazon/Trendyol/n11 komisyon oranları (Amazon'da bazı
-  sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda; n11 alanı kasıtlı
-  olarak kısmi — bkz. "Kaynak güvenilirliği" bölümü aşağıda).
+  Bu tablo Amazon/Shopify/Shopier/n11/Trendyol/Hepsiburada-varsayılanı için ortak;
+  Trendyol'un, n11'in ve Hepsiburada'nın kendi override'ları (`trendyolKargoOverrideTRY` /
+  `n11KargoOverrideTRY` / `hepsiburadaKargoOverrideTRY`) ve Etsy'nin tamamen ayrı kargo
+  alanı `computeAll()`'a doğrudan input olarak geçiliyor (bkz. "Kargo modeli" bölümü
+  yukarıda).
+- `KH.SECTORS` — Sektör başına Amazon/Trendyol/n11/Hepsiburada komisyon oranları
+  (Amazon'da bazı sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda; n11
+  ve Hepsiburada alanları kasıtlı olarak kısmi/eşleme-ağırlıklı — bkz. "Kaynak
+  güvenilirliği" bölümü aşağıda).
 - `KH.N11_HIZMET_BEDELI_PCT` — n11'in komisyondan ayrı, tüm kategorilerde sabit
   "%1 pazarlama + %0,67 pazaryeri" hizmet bedeli (KDV dahil, n11'in resmi destek
-  sayfasıyla doğrulandı).
+  sayfasıyla doğrulandı). Hepsiburada'nın BENZER bir sabit ücreti olduğu birden fazla
+  kaynakta ima edildi ama hiçbirinde somut bir ₺ rakamı yoktu — bu yüzden bilinçli
+  olarak eklenmedi, Hepsiburada için bu sabitin bir eşdeğeri YOK.
 - `KH.SHOPIFY_PLANS` — Plan başına aylık ücret + Shopify'ın "dış ödeme sağlayıcı"
   ek ücreti (Shopify Payments Türkiye'de yok, bkz. "Gider kalemleri" bölümü aşağıda).
 - `KH.SHOPIFY_GATEWAY_DEFAULT_PCT` — Kullanıcının kendi yerel ödeme sağlayıcısından
@@ -382,7 +531,7 @@ değiştirip `python3 scripts/gen_icons.py` çalıştırmanız yeterli.
 
 ## Kaynak güvenilirliği — önemli
 
-`research/` klasöründeki beş dosya, uygulamaya gömülü her oranın nereden geldiğini,
+`research/` klasöründeki altı dosya, uygulamaya gömülü her oranın nereden geldiğini,
 hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. Özetle:
 
 - **Amazon.com.tr:** Resmi kaynak (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026
@@ -445,6 +594,22 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
   eBay bünyesine katıldı, aktif bir pazaryeri değil. Çoklu ve birbirini
   doğrulayan haber kaynağıyla teyit edildi (Webrazzi, NTV, Wikipedia) —
   YÜKSEK güven.
+- **Hepsiburada (kategori komisyonu, 11 Ağustos 2026):** Resmi kaynak
+  (Hepsiburada'nın kendi kategori-bazlı komisyon oranları PDF'i, 70+ alt
+  kategori) — kaynağın kendisi YÜKSEK güven, ama 31 sektöre eşlenirken (bazı
+  sektörlerde birden fazla alt kategori tek orana indirgendi) eşleme ORTA
+  güven; Otomotiv'de özellikle dikkatli olun (14 alt kategori, %9-18 arası
+  geniş bir aralık — override önerilir). 2 sektörde (Hediye Kartı, Diğer)
+  PDF'te uygun bir eşleşme yok. **Hepsiburada (KDV mekanizması):** resmi
+  PDF'in kendi dipnotu tek başına belirsiz kaldığı için ikincil bir kaynaktaki
+  somut bir örnekle çözüldü — Trendyol/n11 ile aynı desen (oran doğrudan
+  fiyata uygulanıyor) — ORTA-YÜKSEK güven. **Hepsiburada (sabit hizmet
+  bedeli):** birden fazla kaynakta ima edildi ama hiçbirinde somut bir ₺
+  rakamı yoktu — bilinçli olarak modellenmedi. **Hepsiburada (kargo):**
+  kapalı/yarı-kapalı bir anlaşmalı taşıyıcı listesi (11 kayıtlı firma,
+  HepsiJET tercih ediliyor ama zorunlu değil) — YÜKSEK güven. Detaylı
+  sektör-eşleme tablosu ve tam kaynak listesi için bkz.
+  `research/hepsiburada-arastirmasi.md`.
 
 Uygulamanın kendisinde de "Kaynaklar & güven notları" bölümü (sayfanın altında,
 açılır panel) aynı uyarıları gösteriyor.
