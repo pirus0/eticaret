@@ -16,7 +16,12 @@
 // app.js/index.html/styles.css/calc.js/settings.js bu ozelliklerin hicbirini
 // icermiyordu — surum artmazsa cevrimdisi/eski-onbellekli kullanicilar eski
 // (Hepsiburada'siz, panosuz, toplu hesaplamasiz) surumde kalirdi.
-var CACHE_NAME = 'kar-hesap-v8';
+// v9 (11 Agustos 2026, ayni gun): N11 sektor genisletmesi (tahmini oranlar),
+// bilgi butonu/animasyonlu Ek Giderler VE kullanici istegiyle Etsy'nin
+// tamamen kaldirilmasi — calc.js/settings.js/app.js/index.html/styles.css
+// hepsi degisti. Surum artmazsa eski onbellekli kullanicilarda kaldirilmis
+// Etsy alanlarina baglanan JS calisip konsol hatasi/bozuk davranis uretebilirdi.
+var CACHE_NAME = 'kar-hesap-v9';
 
 var APP_SHELL = [
   './',

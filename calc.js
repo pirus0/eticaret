@@ -27,10 +27,6 @@
  *     ama `trendyolKargoOverrideTRY` girilirse ona öncelik veriliyor —
  *     üç bağımsız kaynağın Trendyol tarifeleri arasında aynı taşıyıcı/desi
  *     için %35'e varan fark bulunduğundan tek bir sayı güvenilir değil.
- *   - Etsy satışları genelde YURT DIŞINA gider; yurt içi desi tablosu farklı
- *     bir maliyet sınıfı olduğu için hiç uygulanmıyor. Etsy kendi
- *     `etsyKargoTRY` alanını kullanıyor (girilmezse 0 — reklam gideri
- *     alanıyla aynı "kullanıcı doldurur" mantığı).
  *
  * GİDER KALEMLERİ — 2. TUR ARAŞTIRMA (10 Ağustos 2026, bkz.
  * research/ek-gider-kalemleri-2026.md):
@@ -48,16 +44,11 @@
  *     kartPct'i yerine (a) kullanıcının kendi yerel ödeme sağlayıcısından
  *     girdiği oran/sabit ücret ve (b) Shopify'ın "dış ödeme sağlayıcı" ek
  *     ücretini (plana göre) ayrı ayrı topluyor.
- *   - Etsy'nin resmi 2,5% "Currency Conversion Fee"si eklendi (`currencyConversionPct`).
- *   - Etsy'nin Türkiye için düzenleyici işletim ücreti %2,27'den %1,67'ye
- *     düzeltildi — resmi kaynağın (help.etsy.com) ülke bazlı tablosu doğrudan
- *     çekilip Türkiye satırı okundu (bkz. research, ORTA-YÜKSEK güven).
  *   - İade (return) beklenen maliyeti: 1 Ocak 2026'dan itibaren iade kargosu
  *     satıcıya ait (mevzuat değişikliği) — `iadeOraniPct` × `iadeMaliyetTRY`
- *     olarak Amazon/Trendyol/Shopify'ın sabit maliyetine ekleniyor. Etsy hariç
- *     (satışları ağırlıkla yurt dışına, farklı bir tüketici-hukuku kapsamına
- *     giriyor). İkisi de varsayılan 0 — güvenilir tek bir "tipik" iade oranı
- *     bulunamadı (kaynaklar %18-%70 arası, kategoriye göre çok değişken).
+ *     olarak Amazon/Trendyol/Shopify'ın sabit maliyetine ekleniyor. Varsayılan
+ *     0 — güvenilir tek bir "tipik" iade oranı bulunamadı (kaynaklar %18-%70
+ *     arası, kategoriye göre çok değişken).
  *
  * YENİ PAZARYERLERİ — 3. TUR (10 Ağustos 2026, kullanıcı isteğiyle araştırıldı;
  * n11'in kargo modeli ve Shopier'in oranı AYNI GÜN, research/ dosyası
@@ -366,20 +357,6 @@
     fixedTRY: 0.49
   };
 
-  // --- ETSY (resmi sayfa çekilemedi; çoklu 2026 kaynağı ile derlendi) ---
-  var ETSY = {
-    transactionPct: 6.5,
-    listingFeeUSD: 0.20,
-    // 10 Ağustos 2026, 2. tur: resmi kaynak (help.etsy.com/Regulatory Operating Fee)
-    // doğrudan çekildi — ülke bazlı tabloda Türkiye %1,67 olarak listeleniyor.
-    // Bu, önceki %2,27 değerini (üçüncül/resmi olmayan bir kaynaktan) değiştiriyor.
-    // Kalan belirsizlik: sayfa bir özetleme aracıyla çekildi (ham HTML birebir
-    // teyit edilmedi) — bkz. research, ORTA-YÜKSEK güven.
-    regulatoryOperatingFeePct: 1.67,
-    defaultPaymentProcessingPct: 4, // TR'ye özel oran doğrulanamadı; "diğer ülkeler" tahmini
-    currencyConversionPct: 2.5, // Resmi kaynak (help.etsy.com/Currency Conversion Fees) — YÜKSEK güven
-    offsiteAds: { underThresholdPct: 15, overThresholdPct: 12, thresholdUSD: 10000 }
-  };
 
   // --- ANA HESAPLAMA ---
   // fixedTRY: sabit TL maliyetler toplamı (maliyet+kargo+reklam+platforma özel sabit ücretler)
@@ -429,7 +406,7 @@
     'costTRY', 'marginPct', 'kargoTRY', 'reklamTRY', 'iadeOraniPct', 'iadeMaliyetTRY',
     'amazonOverridePct', 'trendyolOverridePct', 'trendyolKargoOverrideTRY',
     'trendyolHizmetBedeliTRY', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY',
-    'shopifyMonthlyUnits', 'etsyKargoTRY', 'etsyPaymentPct',
+    'shopifyMonthlyUnits',
     'n11OverridePct', 'shopierOverridePct', 'monthlyUnits', 'n11KargoOverrideTRY',
     'hepsiburadaOverridePct', 'hepsiburadaKargoOverrideTRY'
   ];
@@ -444,8 +421,7 @@
 
   function computeAll(rawInput) {
     // input: { costTRY, sectorId, marginPct, kargoTRY, reklamTRY, shopifyPlanId,
-    //   etsyPaymentPct, etsyOffsiteAds, etsyOverThreshold, trendyolOverridePct,
-    //   amazonOverridePct, trendyolKargoOverrideTRY, n11KargoOverrideTRY, etsyKargoTRY,
+    //   trendyolOverridePct, amazonOverridePct, trendyolKargoOverrideTRY, n11KargoOverrideTRY,
     //   trendyolHizmetBedeliTRY, shopifyGatewayPct, shopifyGatewayFixedTRY,
     //   hepsiburadaOverridePct, hepsiburadaKargoOverrideTRY,
     //   iadeOraniPct, iadeMaliyetTRY }
@@ -455,9 +431,8 @@
     // (veya yarı-kapalı) anlaşmalı kargo listesi kullandığından (bkz. dosya başı
     // 3. tur notu ve research/hepsiburada-arastirmasi.md) paylaşılan genel tutar
     // sadece yön gösterici, gerçek panel tutarı bu alanlara girilebilir.
-    // etsyKargoTRY: Etsy'ye özel, kargoTRY'den bağımsız (bkz. dosya başındaki not).
     // iadeOraniPct/iadeMaliyetTRY: Amazon/Trendyol/Shopify/Hepsiburada'ya uygulanan
-    // beklenen iade maliyeti (oran% × maliyet); Etsy'ye UYGULANMAZ (bkz. dosya başı notu).
+    // beklenen iade maliyeti (oran% × maliyet).
     var input = sanitizeInput(rawInput);
     var sector = SECTORS.filter(function (s) { return s.id === input.sectorId; })[0];
     var results = {};
@@ -650,29 +625,6 @@
       results.shopier = r;
     })();
 
-    // --- ETSY ---
-    (function () {
-      var paymentPct = input.etsyPaymentPct != null ? input.etsyPaymentPct : ETSY.defaultPaymentProcessingPct;
-      var listingFeeTRY = ETSY.listingFeeUSD * FX.USD_TRY;
-      var pcts = [
-        { label: 'İşlem komisyonu', pct: ETSY.transactionPct },
-        { label: 'Ödeme işleme (tahmini)', pct: paymentPct },
-        { label: 'Düzenleyici işletim ücreti (TR)', pct: ETSY.regulatoryOperatingFeePct },
-        { label: 'Para birimi çevrim ücreti', pct: ETSY.currencyConversionPct },
-        { label: 'Hedef kâr', pct: input.marginPct }
-      ];
-      if (input.etsyOffsiteAds) {
-        var adsPct = input.etsyOverThreshold ? ETSY.offsiteAds.overThresholdPct : ETSY.offsiteAds.underThresholdPct;
-        pcts.splice(4, 0, { label: 'Offsite Ads (zorunlu)', pct: adsPct });
-      }
-      // Etsy, paylaşılan yurt içi kargo tablosunu KULLANMAZ (satışlar genelde
-      // yurt dışına gider — farklı bir maliyet sınıfı). Kendi alanı girilmezse 0.
-      var etsyKargo = input.etsyKargoTRY != null ? input.etsyKargoTRY : 0;
-      var fixed = input.costTRY + etsyKargo + input.reklamTRY + listingFeeTRY;
-      var r = solvePrice(fixed, pcts);
-      results.etsy = r;
-    })();
-
     // --- BİRİM KÂR (₺) + AYLIK HACİM PROJEKSİYONU ---
     // "Hedef kâr" yüzdesi zaten her platformun breakdown'ında bir satır olarak
     // duruyordu (price * marginPct/100) — burada sadece bunu her sonuca
@@ -813,30 +765,11 @@
       results.shopier = r;
     })();
 
-    (function () { // Etsy
-      var paymentPct = input.etsyPaymentPct != null ? input.etsyPaymentPct : ETSY.defaultPaymentProcessingPct;
-      var listingFeeTRY = ETSY.listingFeeUSD * FX.USD_TRY;
-      var pcts = [
-        { label: 'İşlem komisyonu', pct: ETSY.transactionPct },
-        { label: 'Ödeme işleme (tahmini)', pct: paymentPct },
-        { label: 'Düzenleyici işletim ücreti (TR)', pct: ETSY.regulatoryOperatingFeePct },
-        { label: 'Para birimi çevrim ücreti', pct: ETSY.currencyConversionPct }
-      ];
-      if (input.etsyOffsiteAds) {
-        var adsPct = input.etsyOverThreshold ? ETSY.offsiteAds.overThresholdPct : ETSY.offsiteAds.underThresholdPct;
-        pcts.push({ label: 'Offsite Ads (zorunlu)', pct: adsPct });
-      }
-      var etsyKargo = input.etsyKargoTRY != null ? input.etsyKargoTRY : 0;
-      var fixed = input.costTRY + etsyKargo + input.reklamTRY + listingFeeTRY;
-      var r = marginFromPrice(fixed, pcts, priceTRY);
-      results.etsy = r;
-    })();
-
     return results;
   }
 
   // ÖNEMLİ (bkz. settings.js başlık notu, 10 Ağustos 2026): FX/SECTORS/
-  // SHOPIFY_PLANS/SHOPIER/ETSY nesne-değerli oldukları için burada bir
+  // SHOPIFY_PLANS/SHOPIER nesne-değerli oldukları için burada bir
   // REFERANS aktarılıyor — dışarıdan (settings.js) "KH.SECTORS[i].x = ..."
   // gibi bir mutasyon computeAll()'ın kendi iç değişkeninin de AYNI nesne
   // olduğu için otomatik yansır. Ama SHOPIFY_GATEWAY_DEFAULT_PCT/
@@ -854,7 +787,6 @@
     TRENDYOL_HIZMET_BEDELI_TRY: TRENDYOL_HIZMET_BEDELI_TRY,
     N11_HIZMET_BEDELI_PCT: N11_HIZMET_BEDELI_PCT,
     SHOPIER: SHOPIER,
-    ETSY: ETSY,
     cargoPrice: cargoPrice,
     cheapestCargo: cheapestCargo,
     resolveRate: resolveRate,

@@ -45,7 +45,7 @@ def main():
         check("Sektor secenekleri yuklendi", sector_options > 5, f"{sector_options} secenek")
 
         cards = page.query_selector_all(".result-card")
-        check("7 platform karti render edildi", len(cards) == 7, f"{len(cards)} kart")
+        check("6 platform karti render edildi", len(cards) == 6, f"{len(cards)} kart")
 
         prices = page.eval_on_selector_all(".result-card .price", "els => els.map(e => e.textContent)")
         check("Tum kartlarda fiyat var", all(p.strip() not in ("", "—") for p in prices), str(prices))
@@ -54,10 +54,10 @@ def main():
         check("Live-bar dolu", len(live_bar_text.strip()) > 0, live_bar_text[:80])
 
         border_colors = page.eval_on_selector_all(".result-card", "els => els.map(e => getComputedStyle(e).borderTopColor)")
-        check("7 kartin ust kenarligi 7 farkli renk", len(set(border_colors)) == 7, str(border_colors))
+        check("6 kartin ust kenarligi 6 farkli renk", len(set(border_colors)) == 6, str(border_colors))
 
         group_classes = page.eval_on_selector_all(".platform-group", "els => els.map(e => e.className)")
-        check("7 platform grubu var", len(group_classes) == 7, str(group_classes))
+        check("6 platform grubu var", len(group_classes) == 6, str(group_classes))
 
         old_price = page.eval_on_selector(".result-card .price", "e => e.textContent")
         cost_input = page.query_selector("#cost")
@@ -82,13 +82,7 @@ def main():
         desi_val = page.eval_on_selector("#desi", "el => el.value")
         check("Desi, olculerden dogru hesaplandi (40*30*20/3000=8)", desi_val == "8", desi_val)
 
-        wrap_display_before = page.eval_on_selector("#etsyThresholdWrap", "el => getComputedStyle(el).display")
-        check("Esik alani basta gizli", wrap_display_before == "none", wrap_display_before)
         page.click("details.advanced > summary")
-        page.check("#etsyOffsite")
-        page.wait_for_timeout(100)
-        wrap_display_after = page.eval_on_selector("#etsyThresholdWrap", "el => getComputedStyle(el).display")
-        check("Offsite isaretlenince esik alani gorunuyor", wrap_display_after != "none", wrap_display_after)
 
         margin_input = page.query_selector("#margin")
         margin_input.click(click_count=3)
@@ -101,7 +95,7 @@ def main():
         page.wait_for_timeout(200)
 
         # ============== KARGO: PLATFORM BAZLI MODEL (10 Agustos 2026 arastirmasi) ==============
-        # details.advanced yukarida (Etsy offsite testi icin) zaten acildi.
+        # details.advanced yukarida zaten acildi.
         trendyol_price_before = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
         amazon_price_before = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
         page.fill("#trendyolKargoOverride", "500")
@@ -113,26 +107,6 @@ def main():
         check("Trendyol kargo override Amazon fiyatini ETKILEMIYOR (platform bazli izolasyon)",
               amazon_price_before == amazon_price_after, f"{amazon_price_before} -> {amazon_price_after}")
         page.fill("#trendyolKargoOverride", "")
-        page.wait_for_timeout(200)
-
-        # Etsy kendi kargo alanini kullanmali; paylasilan desi/tasiyici degisince fiyati ETKILENMEMELI.
-        etsy_price_before_shared = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
-        desi_input = page.query_selector("#desi")
-        desi_input.click(click_count=3)
-        desi_input.type("25")
-        page.wait_for_timeout(200)
-        etsy_price_after_shared = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
-        check("Etsy fiyati paylasilan kargo/desi degisince ETKILENMIYOR (ayri alan kullanir)",
-              etsy_price_before_shared == etsy_price_after_shared, f"{etsy_price_before_shared} -> {etsy_price_after_shared}")
-
-        page.fill("#etsyKargo", "300")
-        page.wait_for_timeout(200)
-        etsy_price_after_own = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
-        check("Etsy kendi kargo alani doldurulunca Etsy fiyati degisiyor",
-              etsy_price_after_shared != etsy_price_after_own, f"{etsy_price_after_shared} -> {etsy_price_after_own}")
-        page.fill("#etsyKargo", "0")
-        desi_input.click(click_count=3)
-        desi_input.type("3")
         page.wait_for_timeout(200)
 
         # ============== GIDER KALEMLERI: 2. TUR (10 Agustos 2026 audit) ==============
@@ -169,26 +143,22 @@ def main():
         page.fill("#shopifyGatewayFixedTRY", "0")
         page.wait_for_timeout(200)
 
-        # Iade (return) alanlari: Amazon/Trendyol/Shopify fiyatini ARTIRMALI, Etsy'yi ETKILEMEMELI (kapsam disi).
+        # Iade (return) alanlari: Amazon/Trendyol/Shopify fiyatini ARTIRMALI.
         amazon_before_iade = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
         trendyol_before_iade = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
         shopify_before_iade = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
-        etsy_before_iade = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
         page.fill("#iadeOrani", "30")
         page.fill("#iadeMaliyet", "80")
         page.wait_for_timeout(200)
         amazon_after_iade = page.eval_on_selector(".result-card.amazon .price", "e => e.textContent")
         trendyol_after_iade = page.eval_on_selector(".result-card.trendyol .price", "e => e.textContent")
         shopify_after_iade = page.eval_on_selector(".result-card.shopify .price", "e => e.textContent")
-        etsy_after_iade = page.eval_on_selector(".result-card.etsy .price", "e => e.textContent")
         check("Iade orani/maliyeti girilince Amazon fiyati ARTIYOR",
               amazon_before_iade != amazon_after_iade, f"{amazon_before_iade} -> {amazon_after_iade}")
         check("Iade orani/maliyeti girilince Trendyol fiyati ARTIYOR",
               trendyol_before_iade != trendyol_after_iade, f"{trendyol_before_iade} -> {trendyol_after_iade}")
         check("Iade orani/maliyeti girilince Shopify fiyati ARTIYOR",
               shopify_before_iade != shopify_after_iade, f"{shopify_before_iade} -> {shopify_after_iade}")
-        check("Iade orani/maliyeti Etsy fiyatini ETKILEMIYOR (kapsam disi — yurt disi satis)",
-              etsy_before_iade == etsy_after_iade, f"{etsy_before_iade} -> {etsy_after_iade}")
         page.fill("#iadeOrani", "0")
         page.fill("#iadeMaliyet", "0")
         page.wait_for_timeout(200)
@@ -541,8 +511,7 @@ def main():
               var out = [];
               specs.forEach(function (spec) {
                 var input = { costTRY: spec.costTRY, sectorId: spec.sectorId, marginPct: spec.marginPct,
-                  kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', etsyPaymentPct: 4,
-                  etsyOffsiteAds: false, etsyOverThreshold: false, monthlyUnits: 0 };
+                  kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', monthlyUnits: 0 };
                 var results = KH.computeAll(input);
                 var rec = { name: spec.name, prioritySite: spec.prioritySite, image: null,
                   createdAt: Date.now(), input: input, results: results };
@@ -898,7 +867,7 @@ def main():
         results_position = wide.eval_on_selector(".layout-results", "el => getComputedStyle(el).position")
         check("Sonuc paneli sticky", results_position == "sticky", results_position)
         col_count = wide.eval_on_selector("#results", "el => getComputedStyle(el).gridTemplateColumns.split(' ').length")
-        check("1400px genislikte 3 sonuc karti yan yana (7 kart, 3+3+1)", col_count == 3, col_count)
+        check("1400px genislikte 3 sonuc karti yan yana (6 kart, 3+3)", col_count == 3, col_count)
         page_width = wide.eval_on_selector(".page", "el => el.getBoundingClientRect().width")
         check("1400px genislikte .page 1180px sabitinden genisledi (3 sutuna yer acmak icin)", page_width > 1180, page_width)
         wide.screenshot(path="verify_screenshot_wide.png", full_page=True)
@@ -940,7 +909,7 @@ def main():
         # --- Referans (oracle): ana formu sablonun 1. satiriyla (Kışlık Mont:
         # maliyet=450, sektor=giyim, marj=25, aylik=20; kargo/reklam sablonda
         # BOS -- ana formun O AN gecerli degerlerini miras almali) AYNI degerlere
-        # getirip 7 platform fiyatini oku. Bulk motoru render'i DEGIL, ana formun
+        # getirip 6 platform fiyatini oku. Bulk motoru render'i DEGIL, ana formun
         # KENDI (zaten test edilmis) readInput()/computeAll() yolunu kullaniyor. ---
         wide.fill("#cost", "450")
         wide.select_option("#sector", "giyim")
@@ -949,7 +918,7 @@ def main():
         margin_wide.type("25")
         wide.fill("#monthlyUnits", "20")
         wide.wait_for_timeout(250)
-        platforms = ["amazon", "trendyol", "n11", "hepsiburada", "shopify", "shopier", "etsy"]
+        platforms = ["amazon", "trendyol", "n11", "hepsiburada", "shopify", "shopier"]
         oracle_prices = {p: wide.eval_on_selector(f".result-card.{p} .price", "e => e.textContent") for p in platforms}
 
         # --- Sablonu geri yukle: 3 satir da hesaplanmali; 1. satir (Kışlık Mont)
@@ -961,7 +930,7 @@ def main():
         row0_cells = wide.eval_on_selector_all(
             "#bulkResultsBody tr:first-child td", "tds => tds.map(td => td.textContent)")
         row0_platform_prices = dict(zip(platforms, row0_cells[1:]))
-        check("Toplu tablonun 1. satiri, ana formun BAGIMSIZ hesapladigi referansla 7 platformda da BIREBIR eslesiyor",
+        check("Toplu tablonun 1. satiri, ana formun BAGIMSIZ hesapladigi referansla 6 platformda da BIREBIR eslesiyor",
               row0_platform_prices == oracle_prices, f"beklenen={oracle_prices} gelen={row0_platform_prices}")
 
         cheapest_cells_row0 = wide.eval_on_selector_all(

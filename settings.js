@@ -16,7 +16,7 @@
  * ayarları test sonuçlarını asla etkilemez.
  *
  * NOT (10 Ağustos 2026, bu katman yazılırken bulunup düzeltilen bir hata):
- * calc.js'te SECTORS/SHOPIFY_PLANS/SHOPIER/ETSY/FX gibi NESNE/DİZİ değerler
+ * calc.js'te SECTORS/SHOPIFY_PLANS/SHOPIER/FX gibi NESNE/DİZİ değerler
  * `KH.X`'e referansla (aynı bellek adresi) aktarılıyordu, bu yüzden dışarıdan
  * `KH.SECTORS[i].trendyol = ...` gibi bir mutasyon computeAll()'ın kendi iç
  * SECTORS değişkenini de otomatik günceller (aynı nesne). Ama üç TEKİL SAYI
@@ -34,7 +34,7 @@
  * Kapsam (kasıtlı olarak kısmi — kullanıcıyla netleştirildi, 10 Ağustos 2026):
  * sektör komisyon oranları (Amazon/Trendyol/n11/Hepsiburada — sonuncusu 11
  * Ağustos 2026'da eklendi, bkz. research/hepsiburada-arastirmasi.md), Trendyol/
- * n11 hizmet bedelleri, Shopier/Shopify/Etsy varsayılanları, döviz kuru.
+ * n11 hizmet bedelleri, Shopier/Shopify varsayılanları, döviz kuru.
  * Hepsiburada'nın Trendyol/n11'in aksine bilinen bir SABİT hizmet bedeli
  * rakamı yok (hiçbir kaynakta doğrulanamadı) — bu yüzden "fees" bölümünde
  * Hepsiburada'ya özel bir alan YOK, sadece sektör oranı ayarlanabiliyor. Kargo
@@ -123,16 +123,6 @@
       },
       shopier: { commissionPct: KH.SHOPIER.commissionPct, fixedTRY: KH.SHOPIER.fixedTRY },
       shopify: { gatewayDefaultPct: KH.SHOPIFY_GATEWAY_DEFAULT_PCT, plans: plans },
-      etsy: {
-        transactionPct: KH.ETSY.transactionPct,
-        listingFeeUSD: KH.ETSY.listingFeeUSD,
-        regulatoryOperatingFeePct: KH.ETSY.regulatoryOperatingFeePct,
-        defaultPaymentProcessingPct: KH.ETSY.defaultPaymentProcessingPct,
-        currencyConversionPct: KH.ETSY.currencyConversionPct,
-        offsiteUnderPct: KH.ETSY.offsiteAds.underThresholdPct,
-        offsiteOverPct: KH.ETSY.offsiteAds.overThresholdPct,
-        offsiteThresholdUSD: KH.ETSY.offsiteAds.thresholdUSD
-      },
       fx: { USD_TRY: KH.FX.USD_TRY, EUR_TRY: KH.FX.EUR_TRY }
     };
   }
@@ -228,33 +218,6 @@
         }
       });
     }
-    if (ov.etsy) {
-      var flatMap = {
-        transactionPct: 'transactionPct',
-        listingFeeUSD: 'listingFeeUSD',
-        regulatoryOperatingFeePct: 'regulatoryOperatingFeePct',
-        defaultPaymentProcessingPct: 'defaultPaymentProcessingPct',
-        currencyConversionPct: 'currencyConversionPct'
-      };
-      Object.keys(flatMap).forEach(function (k) {
-        if (ov.etsy[k] != null) {
-          var v = clampPositive(ov.etsy[k]);
-          if (v != null) KH.ETSY[flatMap[k]] = v;
-        }
-      });
-      if (ov.etsy.offsiteUnderPct != null) {
-        var ou = clampPositive(ov.etsy.offsiteUnderPct);
-        if (ou != null) KH.ETSY.offsiteAds.underThresholdPct = ou;
-      }
-      if (ov.etsy.offsiteOverPct != null) {
-        var oo = clampPositive(ov.etsy.offsiteOverPct);
-        if (oo != null) KH.ETSY.offsiteAds.overThresholdPct = oo;
-      }
-      if (ov.etsy.offsiteThresholdUSD != null) {
-        var ot = clampPositive(ov.etsy.offsiteThresholdUSD);
-        if (ot != null) KH.ETSY.offsiteAds.thresholdUSD = ot;
-      }
-    }
     if (ov.fx) {
       if (ov.fx.USD_TRY != null) {
         var ux = clampPositive(ov.fx.USD_TRY);
@@ -291,14 +254,6 @@
       p.monthlyUSD = d.monthlyUSD;
       p.externalSurchargePct = d.externalSurchargePct;
     });
-    KH.ETSY.transactionPct = defaults.etsy.transactionPct;
-    KH.ETSY.listingFeeUSD = defaults.etsy.listingFeeUSD;
-    KH.ETSY.regulatoryOperatingFeePct = defaults.etsy.regulatoryOperatingFeePct;
-    KH.ETSY.defaultPaymentProcessingPct = defaults.etsy.defaultPaymentProcessingPct;
-    KH.ETSY.currencyConversionPct = defaults.etsy.currencyConversionPct;
-    KH.ETSY.offsiteAds.underThresholdPct = defaults.etsy.offsiteUnderPct;
-    KH.ETSY.offsiteAds.overThresholdPct = defaults.etsy.offsiteOverPct;
-    KH.ETSY.offsiteAds.thresholdUSD = defaults.etsy.offsiteThresholdUSD;
     KH.FX.USD_TRY = defaults.fx.USD_TRY;
     KH.FX.EUR_TRY = defaults.fx.EUR_TRY;
   }

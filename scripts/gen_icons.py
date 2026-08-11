@@ -51,19 +51,22 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
     # Favicon'lar (dis hatlari yumusatmak icin 4x supersample)
+    # glyph_ratio 11 Ağustos 2026'da 0.66 -> 0.50 küçültüldü: glif kenarlara
+    # neredeyse değiyordu, özellikle 16px'te taraytıcı sekmesinde bulanık/
+    # kalabalık görünüyordu (kullanıcı geri bildirimi).
     for size in (16, 32):
-        big = draw_percent(size * 4, glyph_ratio=0.66, corner_ratio=0.18)
+        big = draw_percent(size * 4, glyph_ratio=0.50, corner_ratio=0.18)
         icon = big.resize((size, size), Image.LANCZOS)
         icon.save(os.path.join(OUT_DIR, f"favicon-{size}.png"))
 
     # Apple touch icon: iOS kendi kose yuvarlatmasini uyguluyor, tam kare + opak zemin ister
-    apple = draw_percent(180 * 2, glyph_ratio=0.6, corner_ratio=0.0)
+    apple = draw_percent(180 * 2, glyph_ratio=0.50, corner_ratio=0.0)
     apple = apple.convert("RGB").resize((180, 180), Image.LANCZOS)
     apple.save(os.path.join(OUT_DIR, "apple-touch-icon.png"))
 
     # "any" amacli PWA ikonlari (192 / 512)
     for size in (192, 512):
-        icon = draw_percent(size, glyph_ratio=0.6, corner_ratio=0.22)
+        icon = draw_percent(size, glyph_ratio=0.50, corner_ratio=0.22)
         icon.save(os.path.join(OUT_DIR, f"icon-{size}.png"))
 
     # "maskable" ikonlar: OS disariyi daireye kirpabilir, glif guvenli bolgede (merkez %80) kalmali

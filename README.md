@@ -1,7 +1,7 @@
 # Kâr Marjı Hesaplayıcı
 
 Ürün maliyetini ve hedef kâr oranını girince; Amazon.com.tr, Trendyol, n11,
-Hepsiburada, Shopify, Shopier ve Etsy'de o hedefe ulaşmak için gereken satış fiyatını —
+Hepsiburada, Shopify ve Shopier'de o hedefe ulaşmak için gereken satış fiyatını —
 komisyon, kargo ve (opsiyonel) reklam giderini hesaba katarak — gösteren, framework'süz, tek sayfalık bir
 PWA (telefona "uygulama gibi" eklenebilen web aracı). Ters yönde de çalışır: elinizde
 zaten bir satış fiyatı varsa (ör. rakip fiyatı), o fiyatın hangi kâr marjına denk
@@ -33,19 +33,22 @@ research/              Oranların dayandığı kaynak notları (tarih + link + g
 
 ## Tasarım
 
-Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/n11/Hepsiburada/Shopify/Shopier/
-Etsy'yi ayırt eden 7 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan
+Renk sadece işlevsel olduğu yerde var: Amazon/Trendyol/n11/Hepsiburada/Shopify/Shopier'i
+ayırt eden 6 vurgu rengi dışında site tamamen mürekkep/kağıt monokrom — gradyan
 yok, "otomatik" seçilmiş bir SaaS-mor teması yok. O renkler de göz kararı seçilmedi:
 `dataviz` paletinin çift-çift-ayırt-edilebilirlik doğrulayıcısından geçirildi (gerçek
-marka renkleri denendiğinde Amazon/Trendyol/Etsy'nin üçü de turuncu ailesinde çıkıp
+marka renkleri denendiğinde Amazon/Trendyol'un ikisi de turuncu ailesinde çıkıp
 `normal-vision ΔE 13.7` ile başarısız oldu — bkz. git geçmişindeki ilgili commit; n11/
 Shopier eklenirken de aynı doğrulayıcıdan geçirilip bronz/mürdüm tonlarında karar
 kılındı, çünkü altın/zeytin gibi doğal adaylar trendyol turuncusuyla CVD açısından
 ayırt edilemiyordu).
 
 **Hepsiburada rengi (11 Ağustos 2026):** mor/eflatun (`--accent-hepsiburada`, hue≈312°),
-etsy (283,6°) ile shopier (343,0°) arasındaki en geniş ve en dengeli boşluğa
-yerleştirildi. n11-shopify arası (sarı-yeşil) ve shopify-amazon arası (camgöbeği) IŞIK
+o dönem paletteki etsy (283,6°) ile shopier (343,0°) arasındaki en geniş ve en dengeli
+boşluğa yerleştirildi (Etsy aynı gün içinde kullanıcı isteğiyle kaldırıldı — bir alt
+küme çıkarmak var olan ikili mesafeleri düşüremeyeceği için Hepsiburada'nın yerleşimi
+ve kalan 6 rengin ayırt edilebilirliği geçerliliğini koruyor, bkz. styles.css'teki
+doğrulama notu). n11-shopify arası (sarı-yeşil) ve shopify-amazon arası (camgöbeği) IŞIK
 modunda daha iyi sonuç verdi (`normal-vision ΔE 16,3`, `CVD ΔE 9,2`, hedefin üzerinde)
 ama KARANLIK modda `validate_palette.js --pairs all` ile tam 0-360° taranınca hiçbir
 hue/L/C kombinasyonu normal-görüş eşiğini (ΔE≥15) geçemedi — karanlık palet zaten
@@ -77,7 +80,7 @@ tema değişse de HER ZAMAN koyu kalacak şekilde ayrı, sabit CSS değişkenler
 ## Kayıtlı ürünler
 
 Özet şeridindeki yer imi (bookmark) ikonuyla o anki hesaplama — ürün adı, satış için
-öncelikli platform, isteğe bağlı bir görsel ve 7 platformun da hesaplanan fiyatlarıyla
+öncelikli platform, isteğe bağlı bir görsel ve 6 platformun da hesaplanan fiyatlarıyla
 birlikte — kaydedilebiliyor. Header'daki (sağ üst) ikinci yer imi ikonu kayıtlı
 ürünler panelini açıyor; buradan inceleyip silebilirsiniz.
 
@@ -128,11 +131,6 @@ firması seçiminde birbirinden çok farklı kısıtlara sahip olduğunu ortaya 
   yardım merkezi sayfasına göre bir seçenek, zorunlu değil — bu yüzden
   Amazon/Shopify gibi soldaki genel tutar doğrudan geçerli, ayrı bir override
   alanı yok.
-- **Etsy:** Satışlar genelde yurt dışına gittiği için soldaki yurt içi tablo
-  HİÇ uygulanmıyor — kavramsal olarak farklı bir maliyet sınıfı. Etsy'nin
-  kendi "Kargo — yurt dışı gönderim (₺)" alanı var ("Platforma özel ayarlar →
-  Etsy" içinde), varsayılan 0 — Reklam Gideri alanıyla aynı mantıkla, siz
-  doldurursunuz.
 
 ## Gider kalemleri (2. tur audit, 10 Ağustos 2026)
 
@@ -153,13 +151,9 @@ bağımsız bir audit'in ardından (bkz. `research/ek-gider-kalemleri-2026.md`)
   kullanılamadığı için, artık kullanıcının kendi yerel sağlayıcısının oranı +
   Shopify'ın plana göre eklediği ek ücret ayrı ayrı toplanıyor ("Platforma özel
   ayarlar → Shopify" içinden değiştirilebilir).
-- **Etsy para birimi çevrim ücreti (%2,5) eklendi:** Resmi kaynaktan, tek/net
-  bir rakam.
-- **Etsy Türkiye düzenleyici işletim ücreti düzeltildi (%2,27 → %1,67):** Resmi
-  kaynağın ülke tablosu doğrudan okundu.
 - **İade (return) beklenen maliyeti eklendi:** 1 Ocak 2026'dan itibaren iade
   kargosu satıcıya ait (mevzuat değişikliği). "İade oranı% × iade başına
-  maliyet" formülüyle Amazon/Trendyol/Shopify'a ekleniyor (Etsy hariç); ikisi
+  maliyet" formülüyle Amazon/Trendyol/Shopify'a ekleniyor; ikisi
   de varsayılan 0, güvenilir bir "tipik" oran bulunamadığı için kullanıcı girer.
 
 ## Bug / görsel / optimizasyon audit'i (10 Ağustos 2026, 3. tur)
@@ -285,8 +279,8 @@ genişletme turu:
 Sayfanın en altında (sonuç kartlarından sonra, `<footer>`'dan önce) bir "Ayarlar"
 düğmesiyle açılıp kapanan kalıcı bir panel eklendi — **kasıtlı olarak hamburger
 menü YOK, ayrı sekmelere bölünmüş bir yapı da YOK**; tek bir sayfa içi panel,
-altı `<details>` grubuna (Sektör komisyonları, Hizmet bedelleri, Shopier,
-Shopify, Etsy, Döviz kuru) bölünmüş. Amaç: `calc.js`'i elle düzenlemeden —
+beş `<details>` grubuna (Sektör komisyonları, Hizmet bedelleri, Shopier,
+Shopify, Döviz kuru) bölünmüş. Amaç: `calc.js`'i elle düzenlemeden —
 oranlar/ücretler değiştikçe veya kullanıcının kendi panelindeki gerçek oran
 farklı olduğunda — kalıcı bir override girilebilmesi.
 
@@ -296,7 +290,7 @@ farklı olduğunda — kalıcı bir override girilebilmesi.
   boş/"—" görünür ama yine de doldurulabilir, bkz. aşağıdaki "Hepsiburada" bölümü),
   Trendyol sabit hizmet bedeli, n11 hizmet bedeli yüzdesi, Shopier komisyon/sabit
   ücret, Shopify'ın plan başına aylık ücreti + dış ödeme sağlayıcı varsayılan oranı,
-  Etsy'nin tüm yüzde/sabit alanları, USD/EUR-TRY kuru. Hepsiburada'nın Trendyol/n11
+  USD/EUR-TRY kuru. Hepsiburada'nın Trendyol/n11
   gibi sabit bir "hizmet bedeli" YOK (hiçbir kaynakta somut bir ₺ rakamı
   bulunamadığı için bilinçli olarak modellenmedi) — bu yüzden "Hizmet bedelleri"
   bölümünde Hepsiburada için ayrı bir alan yok, sadece sektör tablosundaki
@@ -325,7 +319,7 @@ farklı olduğunda — kalıcı bir override girilebilmesi.
   (n11 hizmet bedeli yüzdesi, Trendyol sabit hizmet bedeli, Shopify dış ödeme
   sağlayıcı varsayılan oranı) `computeAll`/`computeAllFromPrice` içinde `KH.X`
   yerine doğrudan modül-içi kapanış (closure) değişkeni olarak okunuyordu. `KH`
-  nesnesinin dizi/nesne alanları (`SECTORS`, `SHOPIFY_PLANS`, `SHOPIER`, `ETSY`,
+  nesnesinin dizi/nesne alanları (`SECTORS`, `SHOPIFY_PLANS`, `SHOPIER`,
   `FX`) referans paylaştığı için mutasyon bazlı override doğru çalışıyordu, ama
   bu üç ilkel (number) alan için `KH.N11_HIZMET_BEDELI_PCT = 20` gibi bir
   atama hesaplamaya HİÇ yansımıyordu — panel sessizce hiçbir şey yapmıyormuş gibi
@@ -425,7 +419,7 @@ yanındaki "Toplu Hesaplama" düğmesiyle açılıyor.
   kendi elle hazırladığı bir CSV'yi de kabul edebilmek.
 - **Platforma özel ayarlar TÜM satırlara aynı şekilde uygulanır:** Ayarlar
   panelindeki sektör oranları, "Platforma özel ayarlar" override'ları, Shopify
-  planı, Etsy Offsite Ads durumu vb. — hiçbiri CSV'den satır satır
+  planı vb. — hiçbiri CSV'den satır satır
   değiştirilemez, o an ana formda/ayarlarda ne geçerliyse bütün satırlara aynen
   uygulanır. Satır bazında farklı bir komisyon oranı veya farklı bir platform
   override'ı girme ihtiyacı olursa mevcut tasarımın kapsamı dışında kalıyor —
@@ -511,6 +505,50 @@ panel açma/kapama + gizlenen alanlar, popover konumu/genişliği/Escape ile
 kapanma, reduced-motion senaryosu) — tüm test paketi bu değişikliklerden sonra
 da 113/113 birim testi ve 190/190 arayüz kontrolüyle yeşil.
 
+## Favicon küçültme ve Etsy'nin kaldırılması (11 Ağustos 2026, 6. tur)
+
+Aynı geri bildirim turunda iki ayrı değişiklik daha yapıldı:
+
+- **Favicon/PWA ikonları küçültüldü:** `scripts/gen_icons.py`'nin ürettiği
+  "%" glifi kenarlara neredeyse değiyordu (favicon'da `glyph_ratio=0.66`,
+  apple-touch-icon/192/512 "any" ikonlarında `0.6`) — özellikle 16px'te
+  bulanık/kalabalık görünüyordu. Oran favicon/apple-touch-icon/192/512'de
+  `0.50`'ye düşürülüp ikonlar yeniden üretildi (maskable ikonlara
+  dokunulmadı, onlar zaten OS'in daireye kırpma ihtimaline karşı `0.42` ile
+  daha korumalıydı). Eski/yeni karşılaştırması kullanıcıya görsel olarak
+  gönderildi, onay üzerine son hâliyle bırakıldı.
+- **Etsy hesaplayıcıdan tamamen kaldırıldı:** Kullanıcı, Etsy'nin fiyatının
+  diğer platformlarla karşılaştırılamayacak kadar düşük çıktığını fark edip
+  sordu; araştırma şunu ortaya çıkardı: Etsy'nin kendi kargo alanı
+  doldurulmadığında 0 kabul ediliyordu (diğer platformlar paylaşılan yurt
+  içi kargo tablosundan gerçek bir tutar kullanıyordu), iade beklenen
+  maliyeti kalemi Etsy'ye hiç uygulanmıyordu (kasıtlı bir tasarımdı, yurt
+  dışı satış farklı bir tüketici-hukuku kapsamına girdiği için — ama sonucu
+  "daha ucuz görünme" yönünde bir yapısal önyargıydı) ve ödeme işleme oranı
+  (%4) Türkiye için hiçbir kaynakta doğrulanamamıştı. Kullanıcı küçük
+  komisyon sapmalarını değil, bu yapısal karşılaştırılamazlığı sorun buldu
+  ve Etsy'nin tamamen çıkarılmasını istedi. Kaldırma şu dosyaların tümünü
+  kapsadı: `calc.js` (ETSY sabiti + iki hesaplama bloğu), `settings.js`
+  (override capture/apply/restore), `app.js` (sonuç kartı, Ayarlar paneli,
+  toplu CSV sütunu, `renderNotes()`), `index.html` (form alanları, Ayarlar
+  bölümü, kayıt diyaloğundaki platform seçeneği), `styles.css`
+  (`--accent-etsy` ve ona bağlı kurallar — kalan 6 renklik kategorik palet
+  `scripts/validate_palette.js` ile ışık ve karanlık modda yeniden
+  doğrulandı, ikisi de hâlâ geçiyor: bir alt küme çıkarmak var olan ikili
+  mesafeleri düşüremeyeceği için bu beklenen bir sonuçtu), `test.js` ve
+  `scripts/verify_ui.py`/`capture_screenshots.py` (Etsy'ye özel testler
+  kaldırıldı, "7 platform" varsayan sayımlar 6'ya güncellendi),
+  `manifest.json` (açıklama metni) ve `sw.js` (önbellek sürümü v8 → v9,
+  eski önbellekli kullanıcıların kaldırılmış Etsy alanlarına bağlanan JS'i
+  çalıştırmaması için). Kaldırılan verinin kaynak/güven notları git
+  geçmişinde ve yukarıdaki "Kaynak güvenilirliği" bölümündeki özet notta
+  duruyor.
+
+Etsy kaldırılınca `test.js`'teki Etsy'ye özel 4 kontrol ve `verify_ui.py`'deki
+Etsy'ye özel kontroller kalktı (kargo izolasyonu, offsite/threshold checkbox'ları,
+İade muafiyeti satırı) — paket artık 109/109 birim testi ve 185/185 arayüz
+kontrolüyle yeşil (190'dan düşüş, kaldırılan Etsy'ye özel UI kontrolleri yüzünden).
+
 ## Nasıl çalıştırılır
 
 Servis çalışanı (service worker) ve `fetch` ile okunan `manifest.json` nedeniyle dosyayı
@@ -544,13 +582,12 @@ kaynak kodda) güncellemek isteyenler için:
 Hepsi `calc.js` içinde, düz JavaScript objeleri olarak duruyor — build gerekmiyor,
 değiştirip kaydetmeniz yeterli:
 
-- `KH.FX` — USD/TRY, EUR/TRY anlık kur değeri ve tarihi (Shopify/Etsy TL çevirisinde kullanılıyor).
+- `KH.FX` — USD/TRY, EUR/TRY anlık kur değeri ve tarihi (Shopify TL çevirisinde kullanılıyor).
 - `KH.CARGO` — Her taşıyıcı için desi bazlı fiyat aralıkları (Aras Kargo kasıtlı olarak yok).
   Bu tablo Amazon/Shopify/Shopier/n11/Trendyol/Hepsiburada-varsayılanı için ortak;
   Trendyol'un, n11'in ve Hepsiburada'nın kendi override'ları (`trendyolKargoOverrideTRY` /
-  `n11KargoOverrideTRY` / `hepsiburadaKargoOverrideTRY`) ve Etsy'nin tamamen ayrı kargo
-  alanı `computeAll()`'a doğrudan input olarak geçiliyor (bkz. "Kargo modeli" bölümü
-  yukarıda).
+  `n11KargoOverrideTRY` / `hepsiburadaKargoOverrideTRY`) `computeAll()`'a doğrudan
+  input olarak geçiliyor (bkz. "Kargo modeli" bölümü yukarıda).
 - `KH.SECTORS` — Sektör başına Amazon/Trendyol/n11/Hepsiburada komisyon oranları
   (Amazon'da bazı sektörler fiyata göre dilimli, ör. Takı/Mücevher, Kozmetik, Gıda; n11
   ve Hepsiburada alanları kasıtlı olarak kısmi/eşleme-ağırlıklı — bkz. "Kaynak
@@ -570,7 +607,6 @@ değiştirip kaydetmeniz yeterli:
   satış hacmi arttıkça %2,99'a kadar düşen kademeli bir yapı var ama tam eşikler kaynaklar
   arası tutarsız olduğu için modellenmedi; gerçek panel oranınızı arayüzdeki override
   alanına girin).
-- `KH.ETSY` — İşlem/ilan/düzenleyici/ödeme işleme/para birimi çevrim oranları + Offsite Ads ücreti.
 
 Bir değeri değiştirdikten sonra `node test.js` çalıştırıp hâlâ "TÜM TESTLER GEÇTİ"
 çıktığını görmeniz yeterli (mantık testleri elle hesaplanmış örneklerle karşılaştırıyor,
@@ -603,12 +639,10 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
   kendi dış ödeme sisteminden ekran görüntüsüyle bildirdiği GERÇEK rakam — genel bir
   piyasa tahmini değil, YÜKSEK güven ama kişiye özel (farklı sağlayıcı/valör
   kullananlar değiştirmeli).
-- **Etsy (işlem komisyonu + para birimi çevrim ücreti):** Çok kaynaklı/resmi
-  teyitli — yüksek güven. **Etsy (TR düzenleyici ücreti):** %1,67, resmi kaynağın
-  ülke tablosundan (10 Ağustos 2026, 2. tur) — ORTA-YÜKSEK güven (otomatik
-  özetleme aracıyla okundu, ham HTML birebir teyit edilmedi). **Etsy (ödeme
-  işleme oranı):** Türkiye için hiçbir kaynakta netleşmedi (tahmini %4, elle
-  düzeltilebilir alan var).
+- **Etsy KALDIRILDI (11 Ağustos 2026, 6. tur):** kullanıcı isteğiyle
+  hesaplayıcıdan tamamen çıkarıldı — bkz. yukarıdaki "Favicon küçültme ve
+  Etsy'nin kaldırılması" bölümündeki gerekçe. Eski komisyon/kargo/ücret
+  kaynaklarının güven seviyeleri git geçmişinde duruyor.
 - **İade (return) maliyeti:** Kargo sorumluluğunun satıcıya geçtiği mevzuat
   değişikliği (1 Ocak 2026) resmi haber kaynağıyla (AA) doğrulandı — YÜKSEK güven.
   Ama "tipik iade oranı" hiçbir kaynakta standart bir rakam olarak bulunamadı —
@@ -619,11 +653,7 @@ hangi tarihte doğrulandığını ve ne kadar güvenilir olduğunu anlatıyor. �
   Trendyol resmi olarak KAPALI bir anlaşmalı kargo listesi kullanıyor (developers.trendyol.com);
   üç ikincil kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için %35'e varan farkla
   ayrışıyor — DÜŞÜK güven, override alanı önerilir. Amazon'un satıcı-gönderimli
-  seçeneği serbest (YÜKSEK güven, resmi kaynak). Shopify tamamen serbest. Etsy
-  satışları yurt dışına gittiği için yurt içi tablo hiç geçerli değil — güvenilir
-  tek bir "ortalama uluslararası kargo" rakamı hiçbir kaynakta bulunamadı (rakip bir
-  Etsy kâr hesaplama aracı bile bu yüzden sabit bir tahmin kullanmıyor); bu alan
-  kasıtlı olarak kullanıcı girişine bırakıldı.
+  seçeneği serbest (YÜKSEK güven, resmi kaynak). Shopify tamamen serbest.
 - **n11 (kategori komisyonu):** Amazon gibi tek/resmi bir oran sayfası yok; iki
   bağımsız 2026 tarihli ikincil kaynaktan (Sentos, Paraşüt) derlenen YAKLAŞIK
   değerler — ORTA güven, kapsam kasıtlı olarak kısmi (~8 sektör; kaynaklardan
@@ -676,8 +706,7 @@ açılır panel) aynı uyarıları gösteriyor.
 
 "Reklam gideri (₺)" alanı bilinçli olarak araştırılmadı/varsayılan değer verilmedi —
 opsiyonel bir alan, kâr hesabına dahil edilecek reklam maliyetini istediğinizde siz
-belirlersiniz (Etsy'nin zorunlu Offsite Ads ücretinden ayrı bir kalem; o ayrıca kendi
-onay kutusuyla hesaba giriyor).
+belirlersiniz.
 
 ## Test etme
 

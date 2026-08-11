@@ -33,33 +33,38 @@
   /* Platform vurgu renkleri — kategorik, çift çift ayırt edilebilirlik için
      doğrulanmış set (OKLab ΔE + protan/deutan simülasyonu ile kontrol edildi,
      bkz. scripts/ — node ile dataviz validator'ı çalıştırıldı). Gerçek marka
-     renkleri kasıtlı kullanılmadı: Amazon/Trendyol/Etsy üçü de turuncu
-     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 7 ton (11 Ağustos
-     2026'da Hepsiburada eklenmesiyle 6'dan 7'ye çıktı — önceki adım 10
-     Ağustos 2026'da n11/Shopier ile 4'ten 6'ya çıkmıştı), sitedeki TEK renk
-     kaynağı — geri kalan her şey mürekkep/kağıt. Karanlık mod için AYNI
-     hueler farklı L/C adımlarıyla yeniden doğrulandı (bkz. body.dark-theme) —
-     otomatik ters çevirme değil, "aynı rampanın karanlık zemine göre
-     doğrulanmış kendi adımı" (dataviz kuralı).
-     Hepsiburada (mor/eflatun, hue≈312°) etsy (283,6°) ile shopier (343,0°)
-     arasındaki en geniş boşluğa yerleştirildi — n11-shopify arası (sarı-yeşil)
-     ve shopify-amazon arası (camgöbeği) ISIK modunda mükemmel sonuç verirken
-     KARANLIK modda hiçbir hue/L/C kombinasyonu normal-görüş eşiğini (ΔE≥15)
-     geçemedi (tam 0-360° tarama ile doğrulandı — karanlık palet zaten mevcut
-     6 renkle ΔE≈15,1 tavanında, n11↔trendyol çifti kaynaklı, bu YENİ bir
-     sorun değil). Mor bölge, aynı tavanı YAKALAYAN (düşüRMEYEN) tek geniş
-     ve dengeli boşluk olduğu için seçildi; karanlıkta bu nedenle chroma
-     (~0,25) paletin geri kalanından (~0,11-0,18) belirgin şekilde yüksek —
-     bilinçli bir ödünleşim, bkz. research/hepsiburada-arastirmasi.md. Işık
-     modunda kontrast beyaz zemine karşı 2,67:1 — shopify (2,82) ile aynı
-     WARN bandında (aşağıdaki .result-card h3 notu burada da geçerli). */
+     renkleri kasıtlı kullanılmadı: Amazon/Trendyol ikisi de turuncu
+     ailesinde olduğu için yan yana ayırt edilemiyordu. Bu 6 ton (11 Ağustos
+     2026'da Hepsiburada eklenmesiyle 6'dan 7'ye çıkmıştı — önceki adım 10
+     Ağustos 2026'da n11/Shopier ile 4'ten 6'ya çıkmıştı — sonra AYNI GÜN
+     içinde Etsy kaldırılınca tekrar 6'ya indi), sitedeki TEK renk kaynağı —
+     geri kalan her şey mürekkep/kağıt. Karanlık mod için AYNI hueler farklı
+     L/C adımlarıyla yeniden doğrulandı (bkz. body.dark-theme) — otomatik
+     ters çevirme değil, "aynı rampanın karanlık zemine göre doğrulanmış
+     kendi adımı" (dataviz kuralı).
+     Hepsiburada (mor/eflatun, hue≈312°) o dönem paletteki etsy (283,6°) ile
+     shopier (343,0°) arasındaki en geniş boşluğa yerleştirildi — n11-shopify
+     arası (sarı-yeşil) ve shopify-amazon arası (camgöbeği) ISIK modunda
+     mükemmel sonuç verirken KARANLIK modda hiçbir hue/L/C kombinasyonu
+     normal-görüş eşiğini (ΔE≥15) geçemedi (tam 0-360° tarama ile doğrulandı
+     — karanlık palet zaten mevcut 6 renkle ΔE≈15,1 tavanında, n11↔trendyol
+     çifti kaynaklı, bu YENİ bir sorun değil). Etsy'nin kaldırılması bu
+     yerleşimi geçersiz kılmıyor: bir alt küme çıkarmak var olan ikili
+     mesafeleri düşüremez, yalnızca artırabilir — Hepsiburada'nın hue'su ve
+     kalan 6 rengin birbirine göre ayırt edilebilirliği aynen korunuyor,
+     yeniden doğrulamaya gerek yok. Mor bölge, aynı tavanı YAKALAYAN
+     (düşüRMEYEN) tek geniş ve dengeli boşluk olduğu için seçildi; karanlıkta
+     bu nedenle chroma (~0,25) paletin geri kalanından (~0,11-0,18) belirgin
+     şekilde yüksek — bilinçli bir ödünleşim, bkz.
+     research/hepsiburada-arastirmasi.md. Işık modunda kontrast beyaz zemine
+     karşı 2,67:1 — shopify (2,82) ile aynı WARN bandında (aşağıdaki
+     .result-card h3 notu burada da geçerli). */
   --accent-amazon: #2a78d6;
   --accent-trendyol: #eb6834;
   --accent-n11: #8a5f00;
   --accent-hepsiburada: #c088e2;
   --accent-shopify: #1baf7a;
   --accent-shopier: #973c78;
-  --accent-etsy: #4a3aa7;
 
   --font-serif: Georgia, 'Iowan Old Style', 'Noto Serif', 'Times New Roman', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -84,15 +89,16 @@
    aşağıdaki node ile doğrulanmış L/C değerleri). Vurgu renkleri de aynı
    hue'ların karanlık banda (OKLCH L 0.48–0.67) göre yeniden doğrulanmış
    kendi adımları — 11 Ağustos 2026'da scripts/validate_palette.js ile
-   kontrol edildi (7 renk aynı anda, --pairs all): CVD ayrımı floor bandında
-   (worst-pair ΔE 6,4 — n11↔trendyol, Hepsiburada eklenmeden ÖNCE de aynı
-   çiftti) ve normal görüş eşiği (ΔE 15,1) geçti — ikisi de paletin zaten
-   var olan tavanı, Hepsiburada bunu düşürmüyor. Kontrast, n11 (2,94) ve
-   etsy (2,82) için önceden beri WARN bandında (metin --ink kullandığı için
-   zararsız, bkz. .result-card h3 yorumu) — Hepsiburada bu bandı PAYLAŞMIYOR,
-   3,31:1 ile 3:1 eşiğini geçiyor (ışık modunda ise 2,67 ile WARN bandında,
-   bkz. yukarıdaki :root notu). --chrome-* burada KASITLI OLARAK tekrar
-   tanımlanmıyor (yukarıdaki açıklamaya bakın). */
+   kontrol edildi (7 renk aynı anda, --pairs all — Etsy o an paletteydi;
+   aynı gün içinde sonradan kaldırıldı, bkz. yukarıdaki :root notu): CVD
+   ayrımı floor bandında (worst-pair ΔE 6,4 — n11↔trendyol, Hepsiburada
+   eklenmeden ÖNCE de aynı çiftti) ve normal görüş eşiği (ΔE 15,1) geçti —
+   ikisi de paletin zaten var olan tavanı, Hepsiburada bunu düşürmüyor.
+   Kontrast, n11 (2,94) için önceden beri WARN bandında (metin --ink
+   kullandığı için zararsız, bkz. .result-card h3 yorumu) — Hepsiburada bu
+   bandı PAYLAŞMIYOR, 3,31:1 ile 3:1 eşiğini geçiyor (ışık modunda ise 2,67
+   ile WARN bandında, bkz. yukarıdaki :root notu). --chrome-* burada
+   KASITLI OLARAK tekrar tanımlanmıyor (yukarıdaki açıklamaya bakın). */
 body.dark-theme {
   --ink: #F1EEE4;
   --paper: #17160F;
@@ -109,7 +115,6 @@ body.dark-theme {
   --accent-hepsiburada: #ae23e9;
   --accent-shopify: #009463;
   --accent-shopier: #cc66a7;
-  --accent-etsy: #6056c0;
 }
 
 *, *::before, *::after {
@@ -768,7 +773,6 @@ details.advanced[open] summary {
 .platform-group.hepsiburada { --accent: var(--accent-hepsiburada); }
 .platform-group.shopify     { --accent: var(--accent-shopify); }
 .platform-group.shopier     { --accent: var(--accent-shopier); }
-.platform-group.etsy        { --accent: var(--accent-etsy); }
 
 /* --- Özet: renkli kutu değil, tipografik ifade --- */
 
@@ -842,7 +846,6 @@ details.advanced[open] summary {
 .result-card.hepsiburada { --accent: var(--accent-hepsiburada); }
 .result-card.shopify     { --accent: var(--accent-shopify); }
 .result-card.shopier     { --accent: var(--accent-shopier); }
-.result-card.etsy        { --accent: var(--accent-etsy); }
 
 .live-dot.amazon      { background: var(--accent-amazon); }
 .live-dot.trendyol    { background: var(--accent-trendyol); }
@@ -850,7 +853,6 @@ details.advanced[open] summary {
 .live-dot.hepsiburada { background: var(--accent-hepsiburada); }
 .live-dot.shopify     { background: var(--accent-shopify); }
 .live-dot.shopier     { background: var(--accent-shopier); }
-.live-dot.etsy        { background: var(--accent-etsy); }
 
 .result-card h3 {
   /* Aynı kontrast gerekçesi: kimlik üstteki 3px renkli çizgiyle zaten
@@ -902,8 +904,8 @@ details.advanced[open] summary {
 }
 
 /* .pct/.profit/.sub/.monthly hepsi bazı kart+mod kombinasyonlarında boş
-   kalabiliyor (ör. Etsy'de usedPct yok, ters modda sub/monthly hiç
-   doldurulmuyor — bkz. app.js renderResults). Boş bir <p> yine de satır
+   kalabiliyor (ör. ters modda sub/monthly hiç doldurulmuyor — bkz. app.js
+   renderResults). Boş bir <p> yine de satır
    yüksekliği + margin kaplayıp kartlarda tutarsız boşluklar bırakıyordu;
    diğer boş-eleman kuralları (.error:empty, .warn:empty vb.) ile aynı
    mantık burada da uygulanıyor. */
@@ -1363,10 +1365,11 @@ summary:focus-visible {
      6 sütun bu genişlikte kartları çok daraltırdı (~144px, fiyat/breakdown
      için yetersiz) — bunun yerine 3 sütunlu düzen kullanılıyor (kart başına
      ~300px, eski 4 sütunlu düzenden bile daha ferah). 11 Ağustos 2026:
-     Hepsiburada eklenince kart sayısı 6'dan 7'ye çıktı — 3 sütun aynen
-     korundu (7, 3'e tam bölünmüyor ama grid otomatik sarıyor: satır 1
-     amazon/trendyol/n11, satır 2 hepsiburada/shopify/shopier, satır 3
-     tek başına etsy — PLATFORM_ORDER sırasıyla). */
+     Hepsiburada eklenince kart sayısı 6'dan 7'ye çıkmıştı (3 sütun aynen
+     korunmuştu, grid otomatik sarıp 7. kartı tek başına 3. satıra
+     düşürüyordu); aynı gün Etsy kaldırılınca kart sayısı tekrar 6'ya indi —
+     3 sütun 2 tam satıra (amazon/trendyol/n11, hepsiburada/shopify/shopier)
+     eşit bölünüyor, yalnız kalan kart kalmadı. */
   .page {
     max-width: 1440px;
   }
@@ -1585,7 +1588,7 @@ summary:focus-visible {
   width: 64px;
 }
 
-/* --- Sabit ücret / Shopier / Shopify / Etsy / FX alan grupları ---
+/* --- Sabit ücret / Shopier / Shopify / FX alan grupları ---
    .field'ın kendi görünümünü (label + input + hint) aynen kullanıyor, sadece
    ~120 alanın tek sütunda uzayıp gitmemesi için responsive bir grid'e alıyor. */
 .settings-fields {
@@ -1762,7 +1765,7 @@ summary:focus-visible {
 }
 
 /* Platform fiyat sütunları .settings-table'ın varsayılan sola dayalı
-   hücrelerinden farklı olarak sağa dayalı — 7 platformun fiyatını dikey
+   hücrelerinden farklı olarak sağa dayalı — 6 platformun fiyatını dikey
    olarak karşılaştırmak (aynı basamak hizası) ürün adı/sektör metin
    sütunlarından farklı bir okuma amacına hizmet ediyor. İlk iki sütun
    (ürün adı, sektör) hariç. */
@@ -1773,7 +1776,7 @@ summary:focus-visible {
 }
 
 /* "En ucuz" platform vurgusu — ana formun özet metnindeki (<strong>, satır
-   ~288) AYNI kalın-yazı deseni, yeni bir renk icat edilmedi (7 platformdan
+   ~288) AYNI kalın-yazı deseni, yeni bir renk icat edilmedi (6 platformdan
    hangisinin ucuz olduğu satır satır değiştiği için tek bir sabit vurgu
    rengi zaten anlamsız olurdu — .accent-* renkleri KİMLİK taşır, "kazanan"
    durumunu değil). */

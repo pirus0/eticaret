@@ -4,17 +4,16 @@
   // Renkler artik styles.css'teki --accent-* degiskenlerinden geliyor (tek
   // kaynak orada) — burada sadece platform anahtari -> etiket eslemesi var.
   // Kart/grup rengi CSS'te .amazon/.trendyol/.n11/.hepsiburada/.shopify/
-  // .shopier/.etsy sinif adiyla uygulaniyor.
+  // .shopier sinif adiyla uygulaniyor.
   var PLATFORM_META = {
     amazon: { label: 'Amazon.com.tr' },
     trendyol: { label: 'Trendyol' },
     n11: { label: 'n11' },
     hepsiburada: { label: 'Hepsiburada' },
     shopify: { label: 'Shopify' },
-    shopier: { label: 'Shopier' },
-    etsy: { label: 'Etsy' }
+    shopier: { label: 'Shopier' }
   };
-  var PLATFORM_ORDER = ['amazon', 'trendyol', 'n11', 'hepsiburada', 'shopify', 'shopier', 'etsy'];
+  var PLATFORM_ORDER = ['amazon', 'trendyol', 'n11', 'hepsiburada', 'shopify', 'shopier'];
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6.5 7l.7 12a2 2 0 0 0 2 1.9h5.6a2 2 0 0 0 2-1.9l.7-12"/></svg>';
   var IMAGE_PLACEHOLDER_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="22" height="22"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M20 15l-4.5-4.5a1.5 1.5 0 0 0-2.12 0L4 19"/></svg>';
@@ -24,9 +23,8 @@
     'carrierNote', 'ads', 'iadeOrani', 'iadeMaliyet',
     'amazonOverride', 'trendyolOverride', 'trendyolKargoOverride', 'trendyolHizmetBedeli',
     'n11Override', 'n11KargoOverride', 'hepsiburadaOverride', 'hepsiburadaKargoOverride',
-    'shopifyPlan', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY', 'shopifyUnits', 'etsyKargo',
+    'shopifyPlan', 'shopifyGatewayPct', 'shopifyGatewayFixedTRY', 'shopifyUnits',
     'shopierOverride',
-    'etsyPayment', 'etsyOffsite', 'etsyOverThreshold', 'etsyThresholdWrap',
     'modeForwardBtn', 'modeReverseBtn', 'marginField', 'targetPriceFieldWrap', 'targetPrice',
     'monthlyUnits', 'monthlyUnitsField', 'freshnessBanner', 'themeToggleBtn', 'themeIcon',
     'summary', 'summaryText', 'results', 'notesList', 'liveBar',
@@ -38,7 +36,7 @@
     'savedSummaryMonthly', 'savedPlatformRank', 'savedSortSelect', 'savedSectorFilter',
     'settingsToggleBtn', 'settingsToggleDot', 'settingsPanel', 'settingsResetAllBtn',
     'settingsSectorsBody', 'settingsFeesFields', 'settingsShopierFields',
-    'settingsShopifyFields', 'settingsEtsyFields', 'settingsFxFields',
+    'settingsShopifyFields', 'settingsFxFields',
     'bulkToggleBtn', 'bulkPanel', 'bulkTemplateBtn', 'bulkFileInput', 'bulkStatus',
     'bulkResultsWrap', 'bulkResultsSummary', 'bulkRecalcBtn', 'bulkExportBtn',
     'bulkResultsHead', 'bulkResultsBody'].forEach(function (id) {
@@ -166,11 +164,7 @@
       shopifyGatewayPct: numOrNull(el.shopifyGatewayPct),
       shopifyGatewayFixedTRY: numOrZero(el.shopifyGatewayFixedTRY),
       shopifyMonthlyUnits: numOrZero(el.shopifyUnits),
-      shopierOverridePct: numOrNull(el.shopierOverride),
-      etsyKargoTRY: numOrZero(el.etsyKargo),
-      etsyPaymentPct: numOrNull(el.etsyPayment),
-      etsyOffsiteAds: el.etsyOffsite.checked,
-      etsyOverThreshold: el.etsyOverThreshold.checked
+      shopierOverridePct: numOrNull(el.shopierOverride)
     };
   }
 
@@ -460,27 +454,24 @@
 
   function renderNotes() {
     var notes = [
-      'Kargo verisi Navlungo Domestic 2026 teklifinden — Aras Kargo kullanıcı isteğiyle listeden çıkarıldı. Tüm kargo fiyatlarına KDV+EPH dahildir. Bu tablo Amazon (satıcı-gönderimli), Shopify ve Trendyol\'un varsayılanı için kullanılır — Etsy\'de kullanılmaz (aşağıya bakın).',
+      'Kargo verisi Navlungo Domestic 2026 teklifinden — Aras Kargo kullanıcı isteğiyle listeden çıkarıldı. Tüm kargo fiyatlarına KDV+EPH dahildir. Bu tablo Amazon (satıcı-gönderimli), Shopify ve Trendyol\'un varsayılanı için kullanılır.',
       'Amazon.com.tr oranları resmi kaynaktan (satis.amazon.com.tr/ucretlendirme), 16 Nisan 2026 tarifesi. Komisyon üzerine ayrıca %20 KDV eklenir (hesaba dahil edildi). Kargo tutarı satıcı-gönderimli (kendi kargo firmanız) senaryoyu varsayar — resmi kaynağa göre bu serbest bir seçim; Amazon Lojistik (FBA) ve Amazon Kolay Gönderi\'nin farklı ücretlendirmesi kapsam dışıdır.',
       'Trendyol komisyon oranları RESMİ DEĞİL — 4 bağımsız kaynaktan (en güncel Temmuz 2026) derlenen yaklaşık değerler; kesin oranı satıcı panelinizden teyit edip ilgili alana yazabilirsiniz. (Komisyonun KDV hariç mi dahil mi tabana uygulandığı sorusu ÇÖZÜLDÜ — bkz. aşağıdaki ayrı not; mevcut hesaplama formülü doğru.)',
       'Trendyol kargo: satıcı, sözleşmesindeki KAPALI bir anlaşmalı kargo listesiyle sınırlı (developers.trendyol.com\'a göre 10 sabit firma; serbest taşıyıcı seçimi yok). Soldaki genel kargo tutarı burada varsayılan olarak kullanılıyor ama üç bağımsız kaynağın Trendyol tarifeleri aynı taşıyıcı/desi için birbirinden %35\'e varan farkla ayrıştığı için kesin değil — panelinizdeki gerçek tutarı "Trendyol → Kargo" alanına girebilirsiniz.',
       'Shopify oranları resmi (shopify.com/pricing), USD cinsinden, ' + KH.FX.date + ' kuruyla (1 USD ≈ ' + KH.FX.USD_TRY + ' TL) TL\'ye çevrildi. Kargo firması seçimi tamamen serbest (platform kısıtlaması yok), bu yüzden soldaki genel tablo doğrudan geçerli.',
-      'Etsy: işlem komisyonu (%6,5) çoklu kaynaktan teyitli. Türkiye düzenleyici işletim ücreti için bkz. aşağıdaki ayrı not (kaynak çelişkisi çözüldü). Ödeme işleme oranı Türkiye için hiçbir kaynakta netleşmedi — %4 varsayımı tahminidir, değiştirilebilir. Offsite Ads ücreti sadece o satış Etsy\'nin site dışı reklamından geldiyse uygulanır (zorunlu, opt-out yok).',
-      'Etsy kargo: satışlar genelde yurt dışına gittiği için soldaki yurt içi kargo tablosu Etsy\'ye HİÇ uygulanmıyor — Etsy kendi ayrı kargo alanını kullanır, boş/0 bırakılırsa fiyat olduğundan düşük çıkar. Taşıyıcı seçimi serbest (DHL/UPS/FedEx/PTT Yurtdışı/Navlungo vb.); tek bir güvenilir ortalama uluslararası tarife bulunamadığı için (hedef ülkeye, ağırlığa ve taşıyıcıya göre çok değişken) gerçek teklifinizi girmeniz gerekir.',
       'Kur anlık görüntüsü ' + KH.FX.date + ' tarihli (doviz.com + xe.com çapraz kontrollü). Uzun vadede canlı bir kur API\'sine bağlanmalı.',
       'Reklam gideri kalemi araştırılmadı — kullanıcı tarafından girilir.',
       'KOMİSYON/KDV TABANI SORUSU ÇÖZÜLDÜ (10 Ağustos 2026, 2. tur araştırma): Amazon komisyonu müşterinin ödediği TOPLAM (KDV dahil) tutar üzerinden hesaplanıp üzerine ayrıca %20 KDV ekleniyor (resmi kaynak: satis.amazon.com.tr/ucretlendirme) — mevcut "pct × 1,20" formülü zaten DOĞRUYMUŞ. Trendyol\'da ise komisyon KDV-hariç tabana uygulanıp üzerine KDV ekleniyor; bu matematiksel olarak brüt fiyatın doğrudan yüzdesine sadeleşiyor, yani Trendyol\'un mevcut formülü de zaten DOĞRUYMUŞ. İki platform farklı sözleşme tabanı kullanıyor ama ikisi de koda halihazırda doğru yansımış — bug yoktu.',
       'Trendyol\'un komisyondan AYRI, sipariş başına sabit bir "platform hizmet bedeli" var: pazarfiyat.com kaynaklı, 30 Ocak 2026 tarihli iki kademeli yapı — "Bugün Kargoda" statüsündeki satıcılarda 6,99₺+KDV, diğerlerinde 10,99₺+KDV (iade sevkiyatlarına uygulanmıyor). Varsayılan olarak yüksek/muhafazakâr kademe kullanıldı (₺13,19); "Trendyol → Hizmet bedeli" alanından değiştirilebilir.',
       'Shopify Payments Türkiye\'de kullanılamıyor (Shopify\'ın kendi TR blogu + ikinci bir kaynakla doğrulandı) — bu yüzden hesaplayıcı artık Shopify\'ın kendi kart oranı yerine, kullanıcının yerel ödeme sağlayıcısından (iyzico/PayTR/banka sanal POS vb.) girdiği oran + Shopify\'ın plana göre eklediği "dış sağlayıcı" ek ücretini (Basic %2 / Grow %1 / Advanced %0,6 — resmi kaynak) topluyor. Varsayılan oran (%2,65) bu aracın kullanıcısının kendi sağlayıcısından ekran görüntüsüyle bildirdiği gerçek rakam (15 gün valörlü) — genel bir piyasa tahmini değil.',
-      'Etsy\'nin resmi "Currency Conversion Fee"si (%2,5) eklendi — help.etsy.com kaynaklı, YÜKSEK güven. Listeleme/ödeme para birimleri farklı olduğunda (bu araç Etsy fiyatlarını USD üzerinden TL\'ye çevirdiği için) uygulanır.',
-      'İade (return) beklenen maliyeti: 1 Ocak 2026\'dan itibaren mesafeli satış sözleşmeleri yönetmeliğindeki değişiklikle, cayma hakkı kapsamındaki iade kargosu artık SATICIYA ait. "İade oranı% × iade başına maliyet" olarak beklenen değer formülüyle Amazon/Trendyol/Shopify\'ın fiyatına ekleniyor (Etsy hariç — satışları ağırlıkla yurt dışına gidiyor, farklı bir tüketici-hukuku kapsamına giriyor). Türkiye e-ticaretinde bunun için standart bir yüzde/sabit değer bulunamadı (kategoriye göre araştırmalarda %18-%70 arası rakamlar görüldü); bu yüzden ikisi de varsayılan 0 — kendi tahmininizi girmezseniz hesaba hiç girmez.',
-      'Etsy\'nin Türkiye için düzenleyici işletim ücreti (regulatory operating fee) %2,27\'den %1,67\'ye DÜZELTİLDİ: resmi kaynağın (help.etsy.com) ülke bazlı tablosu doğrudan çekilip Türkiye satırı okundu (iki bağımsız çekimde de aynı sonuç). Rakip iki üçüncül kaynak hâlâ farklı değerler veriyor (%2,27 ve belirsiz bir "%0,32-%1,15" aralığı) ama ikisi de resmi sayfa değil; bu yüzden resmi kaynağa güvenildi. Kalan küçük belirsizlik: sayfa bir otomatik özetleme aracıyla okundu, ham HTML birebir teyit edilmedi — kesinlik için kendi Etsy satıcı panelinizden (Ödemeler → Ücretler) teyit edebilirsiniz.',
+      'İade (return) beklenen maliyeti: 1 Ocak 2026\'dan itibaren mesafeli satış sözleşmeleri yönetmeliğindeki değişiklikle, cayma hakkı kapsamındaki iade kargosu artık SATICIYA ait. "İade oranı% × iade başına maliyet" olarak beklenen değer formülüyle Amazon/Trendyol/Shopify\'ın fiyatına ekleniyor. Türkiye e-ticaretinde bunun için standart bir yüzde/sabit değer bulunamadı (kategoriye göre araştırmalarda %18-%70 arası rakamlar görüldü); bu yüzden ikisi de varsayılan 0 — kendi tahmininizi girmezseniz hesaba hiç girmez.',
       'n11 EKLENDİ (3. tur araştırma, 10 Ağustos 2026): komisyon oranları kategori bazlı, 3 bağımsız ikincil kaynaktan derlendi — Amazon gibi resmi/tek bir oran sayfası bulunamadı, ORTA güven. Kategori kapsamı KASITLI OLARAK KISMİ: yalnızca 2+ kaynağın örtüştüğü ya da tek kaynağın çok spesifik olduğu ~8/31 sektör dolduruldu — Trendyol\'daki "veri yoksa boş bırak" deseninin aynısı; eksik sektörlerde "n11 → Komisyon" alanından kendi oranınızı girebilirsiniz. Komisyondan ayrı, tüm kategorilerde sabit bir "%1 pazarlama + %0,67 pazaryeri" hizmet bedeli de (KDV dahil edilerek) hesaba katıldı. Kargo: n11\'de taşıyıcı seçimi varsayılan olarak serbest (mağazalar kendi kargo firmasını belirler, sadece isteğe bağlı "Özel Kargo Kampanyası"na katılanlar kapalı listeyle sınırlı) — bu yüzden soldaki genel kargo tablosu Amazon/Shopify ile aynı şekilde doğrudan kullanılıyor.',
       'Shopier EKLENDİ (3. tur araştırma, 10 Ağustos 2026): komisyon sabit %2,99 + 0,49₺ (yurt içi) — biri Shopier\'in kendi resmi sayfası olmak üzere 2 bağımsız ve güncel (Kasım 2025 sonrası) kaynakla teyitli, YÜKSEK güven. Daha eski (Eylül 2025) bir üçüncü kaynak aylık satış hacmine göre kademeli bir oran öne sürüyordu; hem daha güncel hem birincil kaynak sabit oranı doğruladığı için kademeli yapı MODELLENMEDİ. Aylık üyelik veya listeleme ücreti yok, sadece satış üzerinden kesinti var. Kargo hizmeti Shopier üzerinden opsiyonel (zorunlu değil), bu yüzden soldaki genel kargo tablosu doğrudan kullanılıyor.',
       'GittiGidiyor ARAŞTIRILDI ama EKLENMEDİ (10 Ağustos 2026): platformun Temmuz 2022\'de tamamen kapanıp eBay bünyesine katıldığı doğrulandı (Hepsiburada\'ya değil) — artık aktif bir pazaryeri olmadığı için hesaba dahil edilmedi.',
       'Kayıtlı ürünler bu tarayıcının kendi cihaz-içi veritabanında (IndexedDB) tutulur — sunucuya gönderilmez, başka bir cihazdan/tarayıcıdan görünmez, tarayıcı verisi temizlenirse silinir.',
       'Hepsiburada EKLENDİ (4. tur araştırma, 11 Ağustos 2026): komisyon oranları resmi kaynaktan (Hepsiburada\'nın kendi kategori-bazlı komisyon oranları PDF\'i, 70+ alt kategori) — kaynağın kendisi YÜKSEK güven ama 31 sektöre eşlenirken (bazı sektörlerde birden fazla alt kategori tek orana indirgendi) eşleme ORTA güven; özellikle Otomotiv\'de dikkatli olun (14 alt kategori, %9-18 arası geniş bir aralık — override şiddetle önerilir). Komisyonun KDV tabanı sorusu, resmi PDF\'in kendi dipnotu tek başına belirsiz kaldığı için ikincil bir kaynaktaki somut bir örnekle çözüldü: Trendyol/n11 ile aynı desen (oran doğrudan fiyata uygulanıyor, Amazon\'un ×1,20 çarpanı YOK). Komisyondan ayrı bir sabit "hizmet bedeli" birden fazla kaynakta ima edildi ama hiçbirinde somut bir ₺ rakamı yoktu — bu yüzden BİLİNÇLİ OLARAK modellenmedi (uydurma bir sayı eklemek yerine). Kargo: Hepsiburada da kapalı/yarı-kapalı bir anlaşmalı taşıyıcı listesiyle çalışıyor (11 kayıtlı firma, HepsiJET tercih ediliyor ama zorunlu değil) — Trendyol/n11 ile aynı desen, soldaki genel kargo tutarı varsayılan olarak kullanılıyor ama "Hepsiburada → Kargo" alanından değiştirilebilir. Detaylı kaynak listesi ve sektör-eşleme tablosu için bkz. research/hepsiburada-arastirmasi.md.',
-      'N11 SEKTÖR GENİŞLETMESİ — TAHMİNİ ORANLAR (5. tur araştırma, 11 Ağustos 2026): Yukarıdaki n11 notunda kasıtlı olarak boş bırakılan ~23 sektörün 21\'ine, kullanıcının açık isteğiyle ("küçük komisyon şaşmalarının olduğu durumda sorun yok, tahmini fiyatı görmek istiyorum") TAHMİNİ bir oran eklendi — kaynaklardan doğrulanmadılar; aynı sektördeki Amazon/Trendyol/Hepsiburada oranlarının ortalaması kullanıldı (Amazon kademeliyse muhafazakâr/yüksek kademesiyle). İki istisna: Saat, n11\'in kendi Takı oranını (%21) doğrudan kullanıyor; Otomotiv, Sentos\'un n11\'e özgü aralığının ortasını (~%12,3) kullanıyor. Hediye Kartı ve Diğer hâlâ boş bırakıldı — ortalamaya girecek güvenilir bir referans yoktu. Bu 21 sektörün güveni yukarıdaki ~8 sektöre göre DAHA DÜŞÜK (ikinci dereceden bir tahmin, doğrudan kaynak değil); arayüzde sonuç kartında "tahmini" etiketiyle ve Ayarlar panelinde noktalı kenarlıklı bir ipucuyla ayrıca işaretleniyor, kullanıcı kendi oranını girerse (override) etiket otomatik kayboluyor.'
+      'N11 SEKTÖR GENİŞLETMESİ — TAHMİNİ ORANLAR (5. tur araştırma, 11 Ağustos 2026): Yukarıdaki n11 notunda kasıtlı olarak boş bırakılan ~23 sektörün 21\'ine, kullanıcının açık isteğiyle ("küçük komisyon şaşmalarının olduğu durumda sorun yok, tahmini fiyatı görmek istiyorum") TAHMİNİ bir oran eklendi — kaynaklardan doğrulanmadılar; aynı sektördeki Amazon/Trendyol/Hepsiburada oranlarının ortalaması kullanıldı (Amazon kademeliyse muhafazakâr/yüksek kademesiyle). İki istisna: Saat, n11\'in kendi Takı oranını (%21) doğrudan kullanıyor; Otomotiv, Sentos\'un n11\'e özgü aralığının ortasını (~%12,3) kullanıyor. Hediye Kartı ve Diğer hâlâ boş bırakıldı — ortalamaya girecek güvenilir bir referans yoktu. Bu 21 sektörün güveni yukarıdaki ~8 sektöre göre DAHA DÜŞÜK (ikinci dereceden bir tahmin, doğrudan kaynak değil); arayüzde sonuç kartında "tahmini" etiketiyle ve Ayarlar panelinde noktalı kenarlıklı bir ipucuyla ayrıca işaretleniyor, kullanıcı kendi oranını girerse (override) etiket otomatik kayboluyor.',
+      'Etsy KALDIRILDI (11 Ağustos 2026, 6. tur, kullanıcı isteğiyle): Etsy\'nin kendi kargo alanı doldurulmadığında 0 kabul edildiği ve iade beklenen maliyeti kalemi Etsy\'ye hiç uygulanmadığı için hesaplanan fiyat diğer platformlarla karşılaştırılamayacak kadar düşük/yanıltıcı çıkıyordu; ayrıca ödeme işleme oranı (%4) Türkiye için hiçbir kaynakta doğrulanamamıştı. Bu yüzden Etsy sonuç kartı, Ayarlar paneli ve toplu hesaplama sütunundan tamamen çıkarıldı. Komisyon/kargo/ücret verileri ve gerekçeleri git geçmişinde duruyor.'
     ];
     el.notesList.innerHTML = notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
   }
@@ -895,7 +886,7 @@
 
   // Tek bir <input>: section/key/subKey data-özniteliklerine, varsayılanı
   // placeholder olarak, kayıtlı bir override varsa onu value olarak taşır.
-  // subKey=null olan alanlar (fees/shopier/etsy/fx'in çoğu) düz section->key
+  // subKey=null olan alanlar (fees/shopier/fx'in çoğu) düz section->key
   // yoluyla saklanır; sektör tablosu ve Shopify planları gibi 2 seviye
   // gerektirenler subKey kullanır (bkz. settings.js setValue).
   function createSettingsInput(section, key, subKey, defaultValue, opts) {
@@ -1052,19 +1043,6 @@
     });
   }
 
-  function renderSettingsEtsyFields() {
-    var d = KHSettings.getDefaults().etsy;
-    el.settingsEtsyFields.innerHTML = '';
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'transactionPct', null, 'İşlem komisyonu (%)', d.transactionPct, { step: '0.1' });
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'listingFeeUSD', null, 'Liste ücreti ($)', d.listingFeeUSD);
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'regulatoryOperatingFeePct', null, 'Düzenleyici işletim ücreti — TR (%)', d.regulatoryOperatingFeePct);
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'defaultPaymentProcessingPct', null, 'Ödeme işleme (tahmini) (%)', d.defaultPaymentProcessingPct, { step: '0.1' });
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'currencyConversionPct', null, 'Para birimi çevrim ücreti (%)', d.currencyConversionPct, { step: '0.1' });
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteUnderPct', null, 'Offsite Ads — eşik altı (%)', d.offsiteUnderPct, { step: '0.1' });
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteOverPct', null, 'Offsite Ads — eşik üstü (%)', d.offsiteOverPct, { step: '0.1' });
-    appendSettingsField(el.settingsEtsyFields, 'etsy', 'offsiteThresholdUSD', null, 'Offsite Ads eşiği ($/yıl)', d.offsiteThresholdUSD, { step: '1' });
-  }
-
   function renderSettingsFxFields() {
     var d = KHSettings.getDefaults().fx;
     el.settingsFxFields.innerHTML = '';
@@ -1119,7 +1097,6 @@
     renderSettingsFeesFields();
     renderSettingsShopierFields();
     renderSettingsShopifyFields();
-    renderSettingsEtsyFields();
     renderSettingsFxFields();
     updateSettingsModifiedState();
 
@@ -1595,11 +1572,6 @@
     renderNotes();
     initTheme();
     renderFreshnessBanner();
-    el.etsyOffsite.addEventListener('change', function () {
-      el.etsyThresholdWrap.style.display = el.etsyOffsite.checked ? '' : 'none';
-      recalc();
-    });
-    el.etsyThresholdWrap.style.display = 'none';
     el.dimApply.addEventListener('click', applyDims);
 
     // #sectorSearch bilinçli olarak bu genel listeden HARİÇ tutuluyor:

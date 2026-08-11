@@ -67,7 +67,7 @@ with sync_playwright() as p:
     wide2.wait_for_timeout(400)
     wide2.click("#settingsToggleBtn")
     wide2.wait_for_timeout(300)
-    for gid in ("settingsGroupFees", "settingsGroupShopier", "settingsGroupShopify", "settingsGroupEtsy", "settingsGroupFx"):
+    for gid in ("settingsGroupFees", "settingsGroupShopier", "settingsGroupShopify", "settingsGroupFx"):
         wide2.eval_on_selector(f"#{gid}", "el => { el.open = true; }")
     wide2.eval_on_selector("#settingsPanel", "el => el.scrollIntoView({block:'start'})")
     wide2.screenshot(path="shot_settings_wide_dark.png", full_page=True)
@@ -91,8 +91,7 @@ with sync_playwright() as p:
           var chain = Promise.resolve();
           specs.forEach(function (spec) {
             var input = { costTRY: spec.costTRY, sectorId: spec.sectorId, marginPct: spec.marginPct,
-              kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', etsyPaymentPct: 4,
-              etsyOffsiteAds: false, etsyOverThreshold: false, monthlyUnits: 10 };
+              kargoTRY: 30, reklamTRY: 0, shopifyPlanId: 'basic', monthlyUnits: 10 };
             var results = KH.computeAll(input);
             var rec = { name: spec.name, prioritySite: spec.prioritySite, image: null,
               createdAt: Date.now(), input: input, results: results };
@@ -107,7 +106,7 @@ with sync_playwright() as p:
     dash.close()
 
     # 11) Genis ekran, acik tema, toplu hesaplama -- gecerli bir CSV yuklenmis,
-    # sonuc tablosu (7 platform sutunu + "en ucuz" kalin vurgusu) goruntude.
+    # sonuc tablosu (6 platform sutunu + "en ucuz" kalin vurgusu) goruntude.
     import csv as _csv
     import tempfile, os
     valid_csv = os.path.join(tempfile.gettempdir(), "shot_bulk_valid.csv")
